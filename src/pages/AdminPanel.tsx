@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Edit2, Trash2, Users, BookOpen, Globe, 
   Layers, GraduationCap, Eye,
-  Save, Check, Upload, Lock
+  Save, Check, Upload
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -189,7 +189,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     }
 
     setShowBulkUploadDialog(false);
-    alert(`成功上传 ${uploadedSessions.length} 个环节！`);
   };
 
   const handleSaveLanguage = async () => {
@@ -362,8 +361,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             break;
         }
     } catch (err) {
-        console.error("Erro ao deletar item:", err);
-        alert("无法删除。该项可能正被其他数据使用。");
+        console.error("Delete error:", err);
     }
     setShowDeleteConfirm(false);
     setItemToDelete(null);
@@ -425,7 +423,19 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {languages.map(lang => (
-                <Card key={lang.id} className="group cursor-pointer hover:shadow-lg transition-shadow"><CardContent className="p-4"><div className="flex flex-col items-center text-center"><img src={lang.avatar} alt="" className="w-16 h-16 rounded-full mb-3" /><h3 className="font-semibold">{lang.name}</h3><p className="text-sm text-gray-500">{lang.nameEn}</p><div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="outline" size="sm" onClick={() => { setEditingLanguage(lang); setLanguageName(lang.name); setLanguageNameEn(lang.nameEn); setLanguageAvatar(lang.avatar); setShowLanguageDialog(true); }}><Edit2 className="w-4 h-4" /></Button><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'language', id: lang.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div></div></CardContent></Card>
+                <Card key={lang.id} className="group cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center text-center">
+                      <img src={lang.avatar} alt="" className="w-16 h-16 rounded-full mb-3" />
+                      <h3 className="font-semibold">{lang.name}</h3>
+                      <p className="text-sm text-gray-500">{lang.nameEn}</p>
+                      <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="outline" size="sm" onClick={() => { setEditingLanguage(lang); setLanguageName(lang.name); setLanguageNameEn(lang.nameEn); setLanguageAvatar(lang.avatar); setShowLanguageDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'language', id: lang.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </TabsContent>
@@ -437,7 +447,19 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {books.map(book => (
-                <Card key={book.id} className="group"><CardContent className="p-4"><div className="flex flex-col items-center text-center"><img src={book.avatar} alt="" className="w-16 h-20 rounded mb-3 object-cover" /><h3 className="font-semibold text-sm">{book.name}</h3><p className="text-xs text-gray-500">{getLanguageName(book.languageId)}</p><div className="flex gap-2 mt-3"><Button variant="outline" size="sm" onClick={() => { setEditingBook(book); setBookName(book.name); setBookLanguageId(book.languageId); setBookAvatar(book.avatar); setShowBookDialog(true); }}><Edit2 className="w-4 h-4" /></Button><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'book', id: book.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div></div></CardContent></Card>
+                <Card key={book.id} className="group">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center text-center">
+                      <img src={book.avatar} alt="" className="w-16 h-20 rounded mb-3 object-cover" />
+                      <h3 className="font-semibold text-sm">{book.name}</h3>
+                      <p className="text-xs text-gray-500">{getLanguageName(book.languageId)}</p>
+                      <div className="flex gap-2 mt-3">
+                        <Button variant="outline" size="sm" onClick={() => { setEditingBook(book); setBookName(book.name); setBookLanguageId(book.languageId); setBookAvatar(book.avatar); setShowBookDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
+                        <Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'book', id: book.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </TabsContent>
@@ -454,7 +476,23 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                 return (
                   <Card key={book.id}>
                     <CardHeader className="pb-2"><CardTitle className="text-lg flex items-center gap-2"><img src={book.avatar} alt="" className="w-8 h-8 rounded" />{book.name}</CardTitle></CardHeader>
-                    <CardContent><div className="space-y-2">{bookUnits.map((unit, idx) => (<div key={unit.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-3"><Badge variant="secondary">{idx + 1}</Badge><div><p className="font-medium">{unit.name}</p><p className="text-sm text-gray-500">{unit.sessions.length} {t('sessions')}</p></div></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => { setEditingUnit(unit); setUnitName(unit.name); setUnitBookId(unit.bookId); setUnitDescription(unit.description || ''); setShowUnitDialog(true); }}><Edit2 className="w-4 h-4" /></Button><Button variant="outline" size="sm" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { setSelectedUnitForSession(unit); setShowSessionDialog(true); }}><Eye className="w-4 h-4" /></Button><Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'unit', id: unit.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div></div>))}</div></CardContent>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {bookUnits.map((unit, idx) => (
+                          <div key={unit.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <Badge variant="secondary">{idx + 1}</Badge>
+                              <div><p className="font-medium">{unit.name}</p><p className="text-sm text-gray-500">{unit.sessions.length} {t('sessions')}</p></div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => { setEditingUnit(unit); setUnitName(unit.name); setUnitBookId(unit.bookId); setUnitDescription(unit.description || ''); setShowUnitDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
+                              <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { setSelectedUnitForSession(unit); setShowSessionDialog(true); }}><Eye className="w-4 h-4" /></Button>
+                              <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'unit', id: unit.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
                   </Card>
                 );
               })}
@@ -474,12 +512,28 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                   <Card key={group.id}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
-                        <div><h3 className="font-semibold text-lg">{group.name}</h3><p className="text-sm text-gray-500">{groupBook?.name} · {groupStudents.length} {t('students')}</p><p className="text-sm text-gray-500">{group.unlockedUnitIds.length} / {groupUnits.length} {t('units')} {t('unlocked')}</p></div>
-                        <div className="flex gap-2"><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'group', id: group.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div>
+                        <div>
+                          <h3 className="font-semibold text-lg">{group.name}</h3>
+                          <p className="text-sm text-gray-500">{groupBook?.name} · {groupStudents.length} {t('students')}</p>
+                          <p className="text-sm text-gray-500">{group.unlockedUnitIds.length} / {groupUnits.length} {t('units')} {t('unlocked')}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'group', id: group.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                        </div>
                       </div>
                       <div className="mt-4 pt-4 border-t">
                         <div className="flex items-center justify-between mb-2"><p className="text-sm font-medium">解锁单元 (点击解锁/锁定)</p></div>
-                        <div className="flex flex-wrap gap-2">{groupUnits.map((unit) => { const isUnlocked = group.unlockedUnitIds.includes(unit.id); return (<Button key={unit.id} variant="outline" size="sm" className={isUnlocked ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600'} onClick={async () => { if (isUnlocked) { await Database.lockUnitForGroup(group.id, unit.id); } else { await handleUnlockUnit(group.id, unit.id); } await loadData(); }}>{isUnlocked ? <Check className="w-3 h-3 mr-1" /> : <Lock className="w-3 h-3 mr-1" />}{unit.name}</Button>); })}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {groupUnits.map((unit) => { 
+                            const isUnlocked = group.unlockedUnitIds.includes(unit.id); 
+                            return (
+                              <Button key={unit.id} variant="outline" size="sm" className={isUnlocked ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600'} onClick={async () => { if (isUnlocked) { await Database.lockUnitForGroup(group.id, unit.id); } else { await handleUnlockUnit(group.id, unit.id); } await loadData(); }}>
+                                {isUnlocked ? <Check className="w-3 h-3 mr-1" /> : <Lock className="w-3 h-3 mr-1" />}
+                                {unit.name}
+                              </Button>
+                            ); 
+                          })}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -487,17 +541,95 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
               })}
             </div>
           </TabsContent>
+          <TabsContent value="students">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{t('students')}</h2>
+              <p className="text-sm text-gray-500">共 {students.length} 名学生</p>
+            </div>
+            <div className="grid gap-2">
+              {students.map(student => (
+                <Card key={student.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#1a3673] rounded-full flex items-center justify-center text-white font-semibold">{student.name.charAt(0)}</div>
+                        <div><p className="font-medium">{student.name}</p><p className="text-sm text-gray-500">{student.email}</p></div>
+                      </div>
+                      <Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'user', id: student.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
 
-      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent><DialogHeader><DialogTitle>{editingLanguage ? '编辑语言' : t('addLanguage')}</DialogTitle></DialogHeader><div className="space-y-4 py-4"><div><Label>语言名称 (中文)</Label><Input value={languageName} onChange={e => setLanguageName(e.target.value)} /></div><div><Label>语言名称 (英文)</Label><Input value={languageNameEn} onChange={e => setLanguageNameEn(e.target.value)} /></div></div><DialogFooter><Button variant="outline" onClick={() => setShowLanguageDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveLanguage} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}><DialogContent><DialogHeader><DialogTitle>{editingBook ? '编辑教材' : t('addBook')}</DialogTitle></DialogHeader><div className="space-y-4 py-4"><div><Label>教材名称</Label><Input value={bookName} onChange={e => setBookName(e.target.value)} /></div><div><Label>所属语言</Label><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger><SelectValue placeholder="选择语言" /></SelectTrigger><SelectContent>{languages.map(lang => (<SelectItem key={lang.id} value={lang.id}>{lang.name}</SelectItem>))}</SelectContent></Select></div></div><DialogFooter><Button variant="outline" onClick={() => setShowBookDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveBook} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}><DialogContent><DialogHeader><DialogTitle>{editingUnit ? '编辑单元' : t('addUnit')}</DialogTitle></DialogHeader><div className="space-y-4 py-4"><div><Label>单元名称</Label><Input value={unitName} onChange={e => setUnitName(e.target.value)} /></div>{!editingUnit && (<div><Label>所属教材</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger><SelectValue placeholder="选择教材" /></SelectTrigger><SelectContent>{books.map(book => (<SelectItem key={book.id} value={book.id}>{book.name}</SelectItem>))}</SelectContent></Select></div>)}</div><DialogFooter><Button variant="outline" onClick={() => setShowUnitDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingLanguage ? '编辑语言' : t('addLanguage')}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>语言名称 (中文)</Label><Input value={languageName} onChange={e => setLanguageName(e.target.value)} /></div>
+            <div><Label>语言名称 (英文)</Label><Input value={languageNameEn} onChange={e => setLanguageNameEn(e.target.value)} /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowLanguageDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveLanguage} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingBook ? '编辑教材' : t('addBook')}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>教材名称</Label><Input value={bookName} onChange={e => setBookName(e.target.value)} /></div>
+            <div><Label>所属语言</Label><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger><SelectValue placeholder="选择语言" /></SelectTrigger><SelectContent>{languages.map(lang => (<SelectItem key={lang.id} value={lang.id}>{lang.name}</SelectItem>))}</SelectContent></Select></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowBookDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveBook} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingUnit ? '编辑单元' : t('addUnit')}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>单元名称</Label><Input value={unitName} onChange={e => setUnitName(e.target.value)} /></div>
+            {!editingUnit && (<div><Label>所属教材</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger><SelectValue placeholder="选择教材" /></SelectTrigger><SelectContent>{books.map(book => (<SelectItem key={book.id} value={book.id}>{book.name}</SelectItem>))}</SelectContent></Select></div>)}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowUnitDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
-          <DialogHeader><DialogTitle className="flex items-center justify-between"><span>编辑单元内容</span><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => selectedUnitForSession && setShowBulkUploadDialog(true)} className="border-[#c5a059] text-[#c5a059]"><Upload className="w-4 h-4 mr-1" />批量上传</Button></div></DialogTitle></DialogHeader>
-          <ScrollArea className="h-[60vh]">{selectedUnitForSession && (<div className="space-y-4 py-4"><p className="font-medium text-[#1a3673]">{selectedUnitForSession.name}</p><div className="space-y-2">{selectedUnitForSession.sessions.sort((a, b) => a.order - b.order).map((session, idx) => (<div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-3"><Badge variant=\"secondary\">{idx + 1}</Badge><span className="text-xl">{session.emoji}</span><div><p className="font-medium">{session.name}</p></div></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => openEditSession(selectedUnitForSession!, session)}><Edit2 className=\"w-4 h-4 mr-1\" />编辑</Button><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'session', id: session.id, extra: selectedUnitForSession.id }); setShowDeleteConfirm(true); }}><Trash2 className=\"w-4 h-4\" /></Button></div></div>))}</div></div>)}</ScrollArea>
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>编辑单元内容</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => selectedUnitForSession && setShowBulkUploadDialog(true)} className="border-[#c5a059] text-[#c5a059]"><Upload className="w-4 h-4 mr-1" />批量上传</Button>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            {selectedUnitForSession && (
+              <div className="space-y-4 py-4">
+                <p className="font-medium text-[#1a3673]">{selectedUnitForSession.name}</p>
+                <div className="space-y-2">
+                  {selectedUnitForSession.sessions.sort((a, b) => a.order - b.order).map((session, idx) => (
+                    <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary">{idx + 1}</Badge>
+                        <span className="text-xl">{session.emoji}</span>
+                        <div><p className="font-medium">{session.name}</p></div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEditSession(selectedUnitForSession, session)}><Edit2 className="w-4 h-4 mr-1" />编辑</Button>
+                        <Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'session', id: session.id, extra: selectedUnitForSession.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </ScrollArea>
           <DialogFooter><Button onClick={() => setShowSessionDialog(false)} variant="outline">{t('close')}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -508,10 +640,24 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           <ScrollArea className="h-[70vh] px-4">
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>环节名称 (例如: Preview, Review)</Label><Input value={sessionName} onChange={e => setSessionName(e.target.value)} /></div>
-                <div><Label>表情符号</Label><div className="flex gap-2 flex-wrap mt-2">{EMOJI_OPTIONS.map(emoji => (<button key={emoji} onClick={() => setSessionEmoji(emoji)} className={`p-2 text-xl rounded-lg ${sessionEmoji === emoji ? 'bg-[#c5a059]/30 ring-2 ring-[#c5a059]' : 'hover:bg-gray-100'}`}>{emoji}</button>))}</div></div>
+                <div><Label>环节名称</Label><Input value={sessionName} onChange={e => setSessionName(e.target.value)} /></div>
+                <div>
+                  <Label>表情符号</Label>
+                  <div className="flex gap-2 flex-wrap mt-2">
+                    {EMOJI_OPTIONS.map(emoji => (
+                      <button key={emoji} onClick={() => setSessionEmoji(emoji)} className={`p-2 text-xl rounded-lg ${sessionEmoji === emoji ? 'bg-[#c5a059]/30 ring-2 ring-[#c5a059]' : 'hover:bg-gray-100'}`}>{emoji}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div><div className="flex items-center justify-between mb-2"><Label>HTML 内容</Label><Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4 mr-1" />上传文件</Button><input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleFileUpload} className="hidden" /></div><Textarea value={sessionHtml} onChange={e => setSessionHtml(e.target.value)} className="min-h-[300px] font-mono text-xs" /></div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>HTML 内容</Label>
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4 mr-1" />上传文件</Button>
+                  <input ref={fileInputRef} type="file" accept=".html,.htm" onChange={handleFileUpload} className="hidden" />
+                </div>
+                <Textarea value={sessionHtml} onChange={e => setSessionHtml(e.target.value)} className="min-h-[300px] font-mono text-xs" />
+              </div>
               <div><Label>Anki 卡片 (JSON)</Label><Textarea value={sessionAnki} onChange={e => setSessionAnki(e.target.value)} className="min-h-[150px] font-mono text-xs" /></div>
             </div>
           </ScrollArea>
@@ -519,8 +665,23 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showBulkUploadDialog} onOpenChange={setShowBulkUploadDialog}><DialogContent><DialogHeader><DialogTitle>批量上传环节</DialogTitle><DialogDescription>上传 HTML 文件。对应的 Anki 文件请命名为：filename_anki.json</DialogDescription></DialogHeader><div className="border-2 border-dashed rounded-lg p-8 text-center"><input ref={bulkUploadRef} type="file" accept=".html,.txt,.json" multiple onChange={handleBulkUpload} className="hidden" /><Button onClick={() => bulkUploadRef.current?.click()} className="bg-[#1a3673] text-white"><Plus className="w-4 h-4 mr-2" />选择文件</Button></div><DialogFooter><Button variant="outline" onClick={() => setShowBulkUploadDialog(false)}>{t('cancel')}</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent><DialogHeader><DialogTitle className="text-red-600">确认删除</DialogTitle><DialogDescription>此操作不可撤销。确定要删除吗？</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('cancel')}</Button><Button variant="destructive" onClick={handleDelete}>{t('delete')}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={showBulkUploadDialog} onOpenChange={setShowBulkUploadDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>批量上传环节</DialogTitle><DialogDescription>上传 HTML 文件。Anki 文件命名为：filename_anki.json</DialogDescription></DialogHeader>
+          <div className="border-2 border-dashed rounded-lg p-8 text-center">
+            <input ref={bulkUploadRef} type="file" accept=".html,.txt,.json" multiple onChange={handleBulkUpload} className="hidden" />
+            <Button onClick={() => bulkUploadRef.current?.click()} className="bg-[#1a3673] text-white"><Plus className="w-4 h-4 mr-2" />选择文件</Button>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowBulkUploadDialog(false)}>{t('cancel')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="text-red-600">确认删除</DialogTitle><DialogDescription>此操作不可撤销。确定要删除吗？</DialogDescription></DialogHeader>
+          <DialogFooter><Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>{t('cancel')}</Button><Button variant="destructive" onClick={handleDelete}>{t('delete')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
