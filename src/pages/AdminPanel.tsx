@@ -14,8 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Edit2, Trash2, Users, BookOpen, Globe, 
-  Layers, GraduationCap, Eye, X,
-  Save, Check, AlertTriangle, Upload, FileText,
+  Layers, GraduationCap, Eye,
+  Save, Check, Upload,
   ArrowUpDown, Lock
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,7 +31,6 @@ const EMOJI_OPTIONS = [
 ];
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
-  const { user: _user } = useAuth();
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('languages');
   
@@ -45,18 +44,13 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [showLanguageDialog, setShowLanguageDialog] = useState(false);
   const [showBookDialog, setShowBookDialog] = useState(false);
   const [showUnitDialog, setShowUnitDialog] = useState(false);
-  const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [showSessionDialog, setShowSessionDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
-  const [showAddSessionDialog, setShowAddSessionDialog] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
-  const [showUnitOrderDialog, setShowUnitOrderDialog] = useState(false);
 
   const [editingLanguage, setEditingLanguage] = useState<Language | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [selectedUnitForSession, setSelectedUnitForSession] = useState<Unit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string; extra?: string } | null>(null);
@@ -73,13 +67,10 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [unitName, setUnitName] = useState('');
   const [unitBookId, setUnitBookId] = useState('');
   const [unitDescription, setUnitDescription] = useState('');
-  const [groupName, setGroupName] = useState('');
-  const [groupBookId, setGroupBookId] = useState('');
   const [sessionName, setSessionName] = useState('');
   const [sessionEmoji, setSessionEmoji] = useState('');
   const [sessionHtml, setSessionHtml] = useState('');
   const [sessionAnki, setSessionAnki] = useState('');
-  const [uploadedFileName, setUploadedFileName] = useState('');
 
   useEffect(() => {
     loadData();
@@ -110,7 +101,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setUploadedFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
@@ -129,7 +119,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     for (const file of fileArray) {
       if (file.name.endsWith('.html') && !file.name.includes('_anki')) {
         const content = await file.text();
-        const baseName = file.name.split('.')[0]; // Correção: remove extensões de forma limpa
+        const baseName = file.name.split('.')[0]; 
         
         const ankiFile = fileArray.find(f => f.name === `${baseName}_anki.html` || f.name === `${baseName}_anki.txt` || f.name === `${baseName}_anki.json`);
         let ankiContent = '';
@@ -170,7 +160,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
 
       if (existingSession) {
-        // Correção: Enviar com nomes de colunas exatos para o banco
         await Database.updateSession(existingSession.id, {
           "htmlContent": sessionData.content,
           "ankiCards": ankiCards,
@@ -188,8 +177,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         await Database.addSessionToUnit(selectedUnitForSession.id, {
           name: sessionData.name,
           emoji,
-          htmlContent: sessionData.content,
-          ankiCards,
+          "htmlContent": sessionData.content,
+          "ankiCards": ankiCards,
           order: newOrder,
         });
       }
@@ -210,7 +199,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     if (editingLanguage) {
       await Database.updateLanguage(editingLanguage.id, {
         name: languageName,
-        "nameEn": languageNameEn, // Correção: Case sensitive
+        "nameEn": languageNameEn, 
         avatar,
       });
     } else {
@@ -237,7 +226,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     if (editingBook) {
       await Database.updateBook(editingBook.id, {
         name: bookName,
-        "languageId": bookLanguageId, // Correção: Case sensitive
+        "languageId": bookLanguageId, 
         avatar,
       });
     } else {
@@ -270,7 +259,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     } else {
       const unitsInBook = await Database.getUnitsByBook(unitBookId);
       const newUnit = await Database.createUnit({
-        "bookId": unitBookId, // Correção: Case sensitive
+        "bookId": unitBookId, 
         name: unitName,
         description: unitDescription,
         order: unitsInBook.length + 1,
@@ -306,23 +295,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setEditingUnit(null);
   };
 
-  const handleAddNewSession = async () => {
-    if (!selectedUnitForSession) return;
-    const newOrder = selectedUnitForSession.sessions.length + 1;
-    await Database.addSessionToUnit(selectedUnitForSession.id, {
-      name: sessionName,
-      emoji: sessionEmoji,
-      "htmlContent": sessionHtml,
-      "ankiCards": [],
-      order: newOrder,
-    });
-    setShowAddSessionDialog(false);
-    resetSessionForm();
-    await loadData();
-    const updatedUnit = await Database.getUnitById(selectedUnitForSession.id);
-    if (updatedUnit) { setSelectedUnitForSession(updatedUnit); }
-  };
-
   const handleSaveSession = async () => {
     if (!selectedUnitForSession || !editingSession) return;
     let ankiCards = [];
@@ -342,7 +314,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }).filter(c => c.front && c.back);
     }
 
-    // CORREÇÃO CRÍTICA: Forçar nomes de colunas com aspas para o Supabase
     await Database.updateSession(editingSession.id, {
       "name": sessionName,
       "emoji": sessionEmoji,
@@ -369,35 +340,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setSessionEmoji('');
     setSessionHtml('');
     setSessionAnki('');
-    setUploadedFileName('');
     setEditingSession(null);
-  };
-
-  const handleSaveGroup = async () => {
-    if (editingGroup) {
-      await Database.updateGroup(editingGroup.id, {
-        name: groupName,
-        "bookId": groupBookId,
-      });
-    } else {
-      const book = await Database.getBookById(groupBookId);
-      await Database.createGroup({
-        name: groupName,
-        "bookId": groupBookId,
-        "languageId": book?.languageId || '',
-        "studentIds": [],
-        "unlockedUnitIds": [],
-      });
-    }
-    setShowGroupDialog(false);
-    resetGroupForm();
-    await loadData();
-  };
-
-  const resetGroupForm = () => {
-    setGroupName('');
-    setGroupBookId('');
-    setEditingGroup(null);
   };
 
   const handleUnlockUnit = async (groupId: string, unitId: string) => {
@@ -436,18 +379,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setSessionEmoji(session.emoji);
     setSessionHtml(session.htmlContent);
     setSessionAnki(JSON.stringify(session.ankiCards, null, 2));
-    setUploadedFileName('');
     setShowSessionDialog(true);
-  };
-
-  const openAddSession = (unit: Unit) => {
-    setSelectedUnitForSession(unit);
-    setSessionName('');
-    setSessionEmoji('🎮');
-    setSessionHtml('');
-    setSessionAnki('');
-    setUploadedFileName('');
-    setShowAddSessionDialog(true);
   };
 
   const getLanguageName = (id: string) => languages.find(l => l.id === id)?.name || '-';
@@ -534,7 +466,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           <TabsContent value="groups">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">{t('groups')}</h2>
-              <Button onClick={() => { resetGroupForm(); setShowGroupDialog(true); }} className="bg-[#1a3673] hover:bg-[#142a5a] text-white"><Plus className="w-4 h-4 mr-2" />{t('addGroup')}</Button>
             </div>
             <div className="grid gap-4">
               {groups.map(group => {
@@ -546,10 +477,10 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div><h3 className="font-semibold text-lg">{group.name}</h3><p className="text-sm text-gray-500">{groupBook?.name} · {groupStudents.length} {t('students')}</p><p className="text-sm text-gray-500">{group.unlockedUnitIds.length} / {groupUnits.length} {t('units')} {t('unlocked')}</p></div>
-                        <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => { setEditingGroup(group); setGroupName(group.name); setGroupBookId(group.bookId); setShowGroupDialog(true); }}><Edit2 className="w-4 h-4" /></Button><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'group', id: group.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div>
+                        <div className="flex gap-2"><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'group', id: group.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div>
                       </div>
                       <div className="mt-4 pt-4 border-t">
-                        <div className="flex items-center justify-between mb-2"><p className="text-sm font-medium">解锁单元 (点击解锁/锁定)</p><Button variant="outline" size="sm" onClick={() => { setEditingGroup(group); setShowUnitOrderDialog(true); }}><ArrowUpDown className="w-3 h-3 mr-1" />调整顺序</Button></div>
+                        <div className="flex items-center justify-between mb-2"><p className="text-sm font-medium">解锁单元 (点击解锁/锁定)</p></div>
                         <div className="flex flex-wrap gap-2">{groupUnits.map((unit) => { const isUnlocked = group.unlockedUnitIds.includes(unit.id); return (<Button key={unit.id} variant="outline" size="sm" className={isUnlocked ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600'} onClick={async () => { if (isUnlocked) { await Database.lockUnitForGroup(group.id, unit.id); } else { await handleUnlockUnit(group.id, unit.id); } await loadData(); }}>{isUnlocked ? <Check className="w-3 h-3 mr-1" /> : <Lock className="w-3 h-3 mr-1" />}{unit.name}</Button>); })}</div>
                       </div>
                     </CardContent>
@@ -567,7 +498,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
       <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
-          <DialogHeader><DialogTitle className="flex items-center justify-between"><span>编辑单元内容</span><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => selectedUnitForSession && setShowBulkUploadDialog(true)} className="border-[#c5a059] text-[#c5a059]"><Upload className="w-4 h-4 mr-1" />批量上传</Button><Button size="sm" onClick={() => selectedUnitForSession && openAddSession(selectedUnitForSession)} className="bg-[#c5a059] text-white"><Plus className="w-4 h-4 mr-1" />添加新环节</Button></div></DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center justify-between"><span>编辑单元内容</span><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => selectedUnitForSession && setShowBulkUploadDialog(true)} className="border-[#c5a059] text-[#c5a059]"><Upload className="w-4 h-4 mr-1" />批量上传</Button></div></DialogTitle></DialogHeader>
           <ScrollArea className="h-[60vh]">{selectedUnitForSession && (<div className="space-y-4 py-4"><p className="font-medium text-[#1a3673]">{selectedUnitForSession.name}</p><div className="space-y-2">{selectedUnitForSession.sessions.sort((a, b) => a.order - b.order).map((session, idx) => (<div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><div className="flex items-center gap-3"><Badge variant="secondary">{idx + 1}</Badge><span className="text-xl">{session.emoji}</span><div><p className="font-medium">{session.name}</p></div></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => openEditSession(selectedUnitForSession!, session)}><Edit2 className="w-4 h-4 mr-1" />编辑</Button><Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'session', id: session.id, extra: selectedUnitForSession.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button></div></div>))}</div></div>)}</ScrollArea>
           <DialogFooter><Button onClick={() => setShowSessionDialog(false)} variant="outline">{t('close')}</Button></DialogFooter>
         </DialogContent>
