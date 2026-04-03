@@ -1,5 +1,5 @@
 // ============================================
-// DATABASE - ASSÍNCRONO (Supabase)
+// DATABASE - VERSÃO COMPLETA (Supabase + Auth)
 // ============================================
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { 
@@ -29,12 +29,12 @@ class Database {
     if (this.useLocalStorage()) {
       const users = JSON.parse(localStorage.getItem(DB_KEYS.users) || '[]');
       if (users.length === 0) {
-        this.seedDemoDataSync();
+        await this.seedDemoData();
       }
     }
   }
 
-  private static seedDemoDataSync(): void {
+  static async seedDemoData(): Promise<void> {
     const lang = { id: crypto.randomUUID(), name: 'Espanhol', nameEn: 'Spanish', avatar: '', createdAt: new Date().toISOString() };
     localStorage.setItem(DB_KEYS.languages, JSON.stringify([lang]));
     const user = { id: crypto.randomUUID(), name: 'Admin', email: 'admin@polyglot.com', password: '123', role: 'admin', createdAt: new Date().toISOString() };
@@ -42,30 +42,54 @@ class Database {
   }
 
   // ============================================
+  // AUTH & CURRENT USER
+  // ============================================
+  static async getCurrentUser(): Promise<User | null> {
+    if (this.useLocalStorage()) {
+      const userJson = localStorage.getItem(DB_KEYS.currentUser);
+      return userJson ? JSON.parse(userJson) : null;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return await this.getUserById(user.id);
+    return null;
+  }
+
+  static async setCurrentUser(user: User | null): Promise<void> {
+    if (this.useLocalStorage()) {
+      if (user) localStorage.setItem(DB_KEYS.currentUser, JSON.stringify(user));
+      else localStorage.removeItem(DB_KEYS.currentUser);
+      return;
+    }
+    if (!user) await supabase.auth.signOut();
+  }
+
+  // ============================================
   // USERS
   // ============================================
   static async getUsers(): Promise<User[]> {
-    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.users) || '[]');
-    const { data, error } = await supabase.from('users').select('*');
-    if (error) throw error;
+    const { data } = await supabase.from('users').select('*');
     return data || [];
   }
 
   static async getUserById(id: string): Promise<User | null> {
-    const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
-    if (error) return null;
+    const { data } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
     return data;
   }
 
   static async getUserByEmail(email: string): Promise<User | null> {
-    const { data, error } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
-    if (error) return null;
+    const { data } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
     return data;
   }
 
   static async createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
     const newUser = { ...user, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  static async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+    const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single();
     if (error) throw error;
     return data;
   }
@@ -78,9 +102,13 @@ class Database {
   // LANGUAGES & BOOKS
   // ============================================
   static async getLanguages(): Promise<Language[]> {
-    const { data, error } = await supabase.from('languages').select('*').order('name');
-    if (error) throw error;
+    const { data } = await supabase.from('languages').select('*').order('name');
     return data || [];
+  }
+
+  static async getLanguageById(id: string): Promise<Language | null> {
+    const { data } = await supabase.from('languages').select('*').eq('id', id).maybeSingle();
+    return data;
   }
 
   static async createLanguage(language: Omit<Language, 'id' | 'createdAt'>): Promise<Language> {
@@ -100,19 +128,17 @@ class Database {
   }
 
   static async getBooks(): Promise<Book[]> {
-    const { data, error } = await supabase.from('books').select('*').order('order');
-    if (error) throw error;
+    const { data } = await supabase.from('books').select('*').order('order');
     return data || [];
   }
 
   static async getBooksByLanguage(languageId: string): Promise<Book[]> {
-    const { data, error } = await supabase.from('books').select('*').eq('languageId', languageId).order('order');
-    if (error) throw error;
+    const { data } = await supabase.from('books').select('*').eq('languageId', languageId).order('order');
     return data || [];
   }
 
   static async getBookById(id: string): Promise<Book | null> {
-    const { data, error } = await supabase.from('books').select('*').eq('id', id).maybeSingle();
+    const { data } = await supabase.from('books').select('*').eq('id', id).maybeSingle();
     return data;
   }
 
@@ -133,22 +159,20 @@ class Database {
   }
 
   // ============================================
-  // UNITS & SESSIONS
+  // UNITS & SESSIONS (Salvamento de HTML corrigido)
   // ============================================
   static async getUnits(): Promise<Unit[]> {
-    const { data, error } = await supabase.from('units').select('*, sessions(*)').order('order');
-    if (error) throw error;
+    const { data } = await supabase.from('units').select('*, sessions(*)').order('order');
     return data || [];
   }
 
   static async getUnitsByBook(bookId: string): Promise<Unit[]> {
-    const { data, error } = await supabase.from('units').select('*, sessions(*)').eq('bookId', bookId).order('order');
-    if (error) throw error;
+    const { data } = await supabase.from('units').select('*, sessions(*)').eq('bookId', bookId).order('order');
     return data || [];
   }
 
   static async getUnitById(id: string): Promise<Unit | null> {
-    const { data, error } = await supabase.from('units').select('*, sessions(*)').eq('id', id).maybeSingle();
+    const { data } = await supabase.from('units').select('*, sessions(*)').eq('id', id).maybeSingle();
     return data;
   }
 
@@ -199,24 +223,67 @@ class Database {
   }
 
   // ============================================
-  // ANKI CARDS (Corrigindo os erros de build)
+  // GROUPS
+  // ============================================
+  static async getGroups(): Promise<Group[]> {
+    const { data } = await supabase.from('groups').select('*');
+    return data || [];
+  }
+
+  static async getGroupById(id: string): Promise<Group | null> {
+    const { data } = await supabase.from('groups').select('*').eq('id', id).maybeSingle();
+    return data;
+  }
+
+  static async createGroup(group: any): Promise<Group> {
+    const { data, error } = await supabase.from('groups').insert(group).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  static async updateGroup(id: string, updates: Partial<Group>): Promise<Group | null> {
+    const { data, error } = await supabase.from('groups').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  static async deleteGroup(id: string): Promise<void> {
+    await supabase.from('groups').delete().eq('id', id);
+  }
+
+  static async unlockUnitForGroup(groupId: string, unitId: string): Promise<void> {
+    const group = await this.getGroupById(groupId);
+    if (group) {
+      const ids = new Set(group.unlockedUnitIds);
+      ids.add(unitId);
+      await this.updateGroup(groupId, { unlockedUnitIds: Array.from(ids) });
+    }
+  }
+
+  static async lockUnitForGroup(groupId: string, unitId: string): Promise<void> {
+    const group = await this.getGroupById(groupId);
+    if (group) {
+      const ids = group.unlockedUnitIds.filter(id => id !== unitId);
+      await this.updateGroup(groupId, { unlockedUnitIds: ids });
+    }
+  }
+
+  // ============================================
+  // ANKI & PROGRESS
   // ============================================
   static async getUserAnkiCards(userId: string): Promise<UserAnkiCard[]> {
-    const { data, error } = await supabase.from('user_anki_cards').select('*').eq('userId', userId);
-    if (error) throw error;
+    const { data } = await supabase.from('user_anki_cards').select('*').eq('userId', userId);
     return data || [];
   }
 
   static async getDueCards(userId: string): Promise<UserAnkiCard[]> {
     const now = new Date().toISOString();
-    const { data, error } = await supabase.from('user_anki_cards').select('*').eq('userId', userId).lte('nextReviewDate', now).neq('status', 'mastered');
-    if (error) throw error;
+    const { data } = await supabase.from('user_anki_cards').select('*').eq('userId', userId).lte('nextReviewDate', now).neq('status', 'mastered');
     return data || [];
   }
 
   static async getNewCards(userId: string): Promise<UserAnkiCard[]> {
-    const { data, error } = await supabase.from('user_anki_cards').select('*').eq('userId', userId).eq('status', 'new');
-    if (error) throw error;
+    const { data } = await supabase.from('user_anki_cards').select('*').eq('userId', userId).eq('status', 'new');
     return data || [];
   }
 
@@ -226,7 +293,6 @@ class Database {
     return data;
   }
 
-  // Atalho para compatibilidade com AnkiReview.tsx
   static async updateAnkiCard(id: string, updates: Partial<UserAnkiCard>): Promise<UserAnkiCard | null> {
     return this.updateUserAnkiCard(id, updates);
   }
@@ -255,17 +321,13 @@ class Database {
     return newCards;
   }
 
-  // ============================================
-  // PROGRESS (Corrigindo isSessionCompleted)
-  // ============================================
   static async getUserProgress(userId: string): Promise<UserProgress[]> {
-    const { data, error } = await supabase.from('user_progress').select('*').eq('userId', userId);
-    if (error) throw error;
+    const { data } = await supabase.from('user_progress').select('*').eq('userId', userId);
     return data || [];
   }
 
   static async getProgressBySession(userId: string, sessionId: string): Promise<UserProgress | null> {
-    const { data, error } = await supabase.from('user_progress').select('*').eq('userId', userId).eq('sessionId', sessionId).maybeSingle();
+    const { data } = await supabase.from('user_progress').select('*').eq('userId', userId).eq('sessionId', sessionId).maybeSingle();
     return data;
   }
 
@@ -284,33 +346,10 @@ class Database {
   }
 
   // ============================================
-  // GROUPS & STATS
+  // STATS
   // ============================================
-  static async getGroups(): Promise<Group[]> {
-    const { data, error } = await supabase.from('groups').select('*');
-    if (error) throw error;
-    return data || [];
-  }
-
-  static async unlockUnitForGroup(groupId: string, unitId: string): Promise<void> {
-    const { data: group } = await supabase.from('groups').select('unlockedUnitIds').eq('id', groupId).single();
-    if (group) {
-      const ids = new Set(group.unlockedUnitIds);
-      ids.add(unitId);
-      await supabase.from('groups').update({ unlockedUnitIds: Array.from(ids) }).eq('id', groupId);
-    }
-  }
-
-  static async lockUnitForGroup(groupId: string, unitId: string): Promise<void> {
-    const { data: group } = await supabase.from('groups').select('unlockedUnitIds').eq('id', groupId).single();
-    if (group) {
-      const ids = group.unlockedUnitIds.filter((id: string) => id !== unitId);
-      await supabase.from('groups').update({ unlockedUnitIds: ids }).eq('id', groupId);
-    }
-  }
-
   static async getUserStats(userId: string): Promise<UserStats | null> {
-    const { data, error } = await supabase.from('user_stats').select('*').eq('userId', userId).maybeSingle();
+    const { data } = await supabase.from('user_stats').select('*').eq('userId', userId).maybeSingle();
     return data;
   }
 
@@ -319,7 +358,8 @@ class Database {
     if (stats) {
       await supabase.from('user_stats').update(updates).eq('userId', userId);
     } else {
-      await supabase.from('user_stats').insert({ userId, ...updates, totalStudyTime: updates.totalStudyTime || 0, streakDays: updates.streakDays || 0, totalWordsLearned: 0, totalUnitsCompleted: 0 });
+      const newStats = { userId, ...updates, totalStudyTime: updates.totalStudyTime || 0, streakDays: updates.streakDays || 0, totalWordsLearned: 0, totalUnitsCompleted: 0 };
+      await supabase.from('user_stats').insert(newStats);
     }
   }
 
