@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Edit2, Trash2, Users, BookOpen, Globe, 
   Layers, GraduationCap, Eye,
-  Save, Check, Upload
+  Save, Check, Upload, Lock as LockIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -528,7 +528,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                             const isUnlocked = group.unlockedUnitIds.includes(unit.id); 
                             return (
                               <Button key={unit.id} variant="outline" size="sm" className={isUnlocked ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-gray-600'} onClick={async () => { if (isUnlocked) { await Database.lockUnitForGroup(group.id, unit.id); } else { await handleUnlockUnit(group.id, unit.id); } await loadData(); }}>
-                                {isUnlocked ? <Check className="w-3 h-3 mr-1" /> : <Lock className="w-3 h-3 mr-1" />}
+                                {isUnlocked ? <Check className="w-3 h-3 mr-1" /> : <LockIcon className="w-3 h-3 mr-1" />}
                                 {unit.name}
                               </Button>
                             ); 
@@ -565,6 +565,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         </Tabs>
       </main>
 
+      {/* Dialogs */}
       <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingLanguage ? '编辑语言' : t('addLanguage')}</DialogTitle></DialogHeader>
