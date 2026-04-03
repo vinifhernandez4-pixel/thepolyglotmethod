@@ -39,7 +39,6 @@ class Database {
   // ============================================
   static async init(): Promise<void> {
     if (this.useLocalStorage()) {
-      // Initialize if needed
       const users = this.getUsersSync();
       if (users.length === 0) {
         this.seedDemoDataSync();
@@ -53,10 +52,8 @@ class Database {
       return;
     }
     
-    // Check if we have any languages
     const languages = await this.getLanguages();
     if (languages.length === 0) {
-      // Add Spanish language
       await this.createLanguage({
         name: 'Espanhol',
         nameEn: 'Spanish',
@@ -64,10 +61,8 @@ class Database {
       });
     }
 
-    // Check if we have any users
     const users = await this.getUsers();
     if (users.length === 0) {
-      // Add admin user
       await this.createUser({
         name: 'Administrador',
         email: 'admin@polyglot.com',
@@ -77,22 +72,18 @@ class Database {
     }
   }
 
-  // ============================================
-  // SYNC FALLBACK METHODS (LocalStorage)
-  // ============================================
+  // LocalStorage Fallbacks (Sync)
   private static getUsersSync(): User[] {
     return JSON.parse(localStorage.getItem(DB_KEYS.users) || '[]');
   }
 
   private static seedDemoDataSync(): void {
-    // Add Spanish language
     this.createLanguageSync({
       name: 'Espanhol',
       nameEn: 'Spanish',
       avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=ES&backgroundColor=e74c3c',
     });
 
-    // Add admin user
     this.createUserSync({
       name: 'Administrador',
       email: 'admin@polyglot.com',
@@ -121,43 +112,29 @@ class Database {
   // USERS
   // ============================================
   static async getUsers(): Promise<User[]> {
-    if (this.useLocalStorage()) {
-      return this.getUsersSync();
-    }
+    if (this.useLocalStorage()) return this.getUsersSync();
     const { data, error } = await supabase.from('users').select('*');
     if (error) throw error;
     return data || [];
   }
 
   static async getUserById(id: string): Promise<User | null> {
-    if (this.useLocalStorage()) {
-      const users = this.getUsersSync();
-      return users.find(u => u.id === id) || null;
-    }
+    if (this.useLocalStorage()) return this.getUsersSync().find(u => u.id === id) || null;
     const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
     if (error) return null;
     return data;
   }
 
   static async getUserByEmail(email: string): Promise<User | null> {
-    if (this.useLocalStorage()) {
-      const users = this.getUsersSync();
-      return users.find(u => u.email === email) || null;
-    }
+    if (this.useLocalStorage()) return this.getUsersSync().find(u => u.email === email) || null;
     const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
     if (error) return null;
     return data;
   }
 
   static async createUser(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    if (this.useLocalStorage()) {
-      return this.createUserSync(user);
-    }
-    const newUser = {
-      ...user,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
+    if (this.useLocalStorage()) return this.createUserSync(user);
+    const newUser = { ...user, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const { data, error } = await supabase.from('users').insert(newUser).select().single();
     if (error) throw error;
     return data;
@@ -187,68 +164,45 @@ class Database {
     await supabase.from('users').delete().eq('id', id);
   }
 
-  // ============================================
-  // CURRENT USER
-  // ============================================
   static async getCurrentUser(): Promise<User | null> {
     if (this.useLocalStorage()) {
       const userJson = localStorage.getItem(DB_KEYS.currentUser);
       return userJson ? JSON.parse(userJson) : null;
     }
     const { data } = await supabase.auth.getUser();
-    if (data.user) {
-      return await this.getUserById(data.user.id);
-    }
+    if (data.user) return await this.getUserById(data.user.id);
     return null;
   }
 
   static async setCurrentUser(user: User | null): Promise<void> {
     if (this.useLocalStorage()) {
-      if (user) {
-        localStorage.setItem(DB_KEYS.currentUser, JSON.stringify(user));
-      } else {
-        localStorage.removeItem(DB_KEYS.currentUser);
-      }
+      if (user) localStorage.setItem(DB_KEYS.currentUser, JSON.stringify(user));
+      else localStorage.removeItem(DB_KEYS.currentUser);
       return;
     }
-    if (user) {
-      // User is already logged in via Supabase Auth
-    } else {
-      await supabase.auth.signOut();
-    }
+    if (!user) await supabase.auth.signOut();
   }
 
   // ============================================
   // LANGUAGES
   // ============================================
   static async getLanguages(): Promise<Language[]> {
-    if (this.useLocalStorage()) {
-      return JSON.parse(localStorage.getItem(DB_KEYS.languages) || '[]');
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.languages) || '[]');
     const { data, error } = await supabase.from('languages').select('*').order('name');
     if (error) throw error;
     return data || [];
   }
 
   static async getLanguageById(id: string): Promise<Language | null> {
-    if (this.useLocalStorage()) {
-      const languages = JSON.parse(localStorage.getItem(DB_KEYS.languages) || '[]');
-      return languages.find((l: Language) => l.id === id) || null;
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.languages) || '[]').find((l: Language) => l.id === id) || null;
     const { data, error } = await supabase.from('languages').select('*').eq('id', id).single();
     if (error) return null;
     return data;
   }
 
   static async createLanguage(language: Omit<Language, 'id' | 'createdAt'>): Promise<Language> {
-    if (this.useLocalStorage()) {
-      return this.createLanguageSync(language);
-    }
-    const newLang = {
-      ...language,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
+    if (this.useLocalStorage()) return this.createLanguageSync(language);
+    const newLang = { ...language, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const { data, error } = await supabase.from('languages').insert(newLang).select().single();
     if (error) throw error;
     return data;
@@ -282,9 +236,7 @@ class Database {
   // BOOKS
   // ============================================
   static async getBooks(): Promise<Book[]> {
-    if (this.useLocalStorage()) {
-      return JSON.parse(localStorage.getItem(DB_KEYS.books) || '[]');
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.books) || '[]');
     const { data, error } = await supabase.from('books').select('*').order('order');
     if (error) throw error;
     return data || [];
@@ -301,10 +253,7 @@ class Database {
   }
 
   static async getBookById(id: string): Promise<Book | null> {
-    if (this.useLocalStorage()) {
-      const books = JSON.parse(localStorage.getItem(DB_KEYS.books) || '[]');
-      return books.find((b: Book) => b.id === id) || null;
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.books) || '[]').find((b: Book) => b.id === id) || null;
     const { data, error } = await supabase.from('books').select('*').eq('id', id).single();
     if (error) return null;
     return data;
@@ -318,11 +267,7 @@ class Database {
       localStorage.setItem(DB_KEYS.books, JSON.stringify(books));
       return newBook;
     }
-    const newBook = {
-      ...book,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
+    const newBook = { ...book, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const { data, error } = await supabase.from('books').insert(newBook).select().single();
     if (error) throw error;
     return data;
@@ -356,9 +301,7 @@ class Database {
   // UNITS
   // ============================================
   static async getUnits(): Promise<Unit[]> {
-    if (this.useLocalStorage()) {
-      return JSON.parse(localStorage.getItem(DB_KEYS.units) || '[]');
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.units) || '[]');
     const { data, error } = await supabase.from('units').select('*').order('order');
     if (error) throw error;
     return data || [];
@@ -375,10 +318,7 @@ class Database {
   }
 
   static async getUnitById(id: string): Promise<Unit | null> {
-    if (this.useLocalStorage()) {
-      const units = JSON.parse(localStorage.getItem(DB_KEYS.units) || '[]');
-      return units.find((u: Unit) => u.id === id) || null;
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.units) || '[]').find((u: Unit) => u.id === id) || null;
     const { data, error } = await supabase.from('units').select('*').eq('id', id).single();
     if (error) return null;
     return data;
@@ -392,11 +332,7 @@ class Database {
       localStorage.setItem(DB_KEYS.units, JSON.stringify(units));
       return newUnit;
     }
-    const newUnit = {
-      ...unit,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
+    const newUnit = { ...unit, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     const { data, error } = await supabase.from('units').insert(newUnit).select().single();
     if (error) throw error;
     return data;
@@ -427,12 +363,10 @@ class Database {
   }
 
   // ============================================
-  // SESSIONS
+  // SESSIONS (Onde fica o HTML)
   // ============================================
   static async getSessions(): Promise<Session[]> {
-    if (this.useLocalStorage()) {
-      return JSON.parse(localStorage.getItem(DB_KEYS.sessions) || '[]');
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.sessions) || '[]');
     const { data, error } = await supabase.from('sessions').select('*').order('order');
     if (error) throw error;
     return data || [];
@@ -449,10 +383,7 @@ class Database {
   }
 
   static async getSessionById(id: string): Promise<Session | null> {
-    if (this.useLocalStorage()) {
-      const sessions = JSON.parse(localStorage.getItem(DB_KEYS.sessions) || '[]');
-      return sessions.find((s: Session) => s.id === id) || null;
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.sessions) || '[]').find((s: Session) => s.id === id) || null;
     const { data, error } = await supabase.from('sessions').select('*').eq('id', id).single();
     if (error) return null;
     return data;
@@ -466,12 +397,15 @@ class Database {
       localStorage.setItem(DB_KEYS.sessions, JSON.stringify(sessions));
       return newSession;
     }
-    const newSession = {
-      ...session,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    const { data, error } = await supabase.from('sessions').insert(newSession).select().single();
+    // Correção: Uso de aspas para garantir mapeamento correto no insert
+    const { data, error } = await supabase.from('sessions').insert({
+      "unitId": session.unitId,
+      "name": session.name,
+      "emoji": session.emoji,
+      "htmlContent": session.htmlContent,
+      "ankiCards": session.ankiCards,
+      "order": session.order
+    }).select().single();
     if (error) throw error;
     return data;
   }
@@ -485,8 +419,26 @@ class Database {
       localStorage.setItem(DB_KEYS.sessions, JSON.stringify(sessions));
       return sessions[index];
     }
-    const { data, error } = await supabase.from('sessions').update(updates).eq('id', id).select().single();
-    if (error) throw error;
+    
+    // CORREÇÃO CRÍTICA: Mapeamento de campos com aspas para evitar erro 406
+    const mappedUpdates: any = {};
+    if (updates.name !== undefined) mappedUpdates["name"] = updates.name;
+    if (updates.emoji !== undefined) mappedUpdates["emoji"] = updates.emoji;
+    if (updates.htmlContent !== undefined) mappedUpdates["htmlContent"] = updates.htmlContent;
+    if (updates.ankiCards !== undefined) mappedUpdates["ankiCards"] = updates.ankiCards;
+    if (updates.order !== undefined) mappedUpdates["order"] = updates.order;
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .update(mappedUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update Session Error:', error);
+      throw error;
+    }
     return data;
   }
 
@@ -502,14 +454,12 @@ class Database {
 
   static async addSessionToUnit(unitId: string, session: Omit<Session, 'id' | 'createdAt' | 'unitId'>): Promise<Session> {
     const newSession = await this.createSession({ ...session, unitId });
-    
-    // Also update the unit's sessions array
     const unit = await this.getUnitById(unitId);
     if (unit) {
-      unit.sessions.push(newSession);
-      await this.updateUnit(unitId, { sessions: unit.sessions });
+      const sessions = unit.sessions || [];
+      sessions.push(newSession);
+      await this.updateUnit(unitId, { sessions });
     }
-    
     return newSession;
   }
 
@@ -517,29 +467,21 @@ class Database {
   // GROUPS
   // ============================================
   static async getGroups(): Promise<Group[]> {
-    if (this.useLocalStorage()) {
-      return JSON.parse(localStorage.getItem(DB_KEYS.groups) || '[]');
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.groups) || '[]');
     const { data, error } = await supabase.from('groups').select('*');
     if (error) throw error;
     return data || [];
   }
 
   static async getGroupsByBook(bookId: string): Promise<Group[]> {
-    if (this.useLocalStorage()) {
-      const groups = JSON.parse(localStorage.getItem(DB_KEYS.groups) || '[]');
-      return groups.filter((g: Group) => g.bookId === bookId);
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.groups) || '[]').filter((g: Group) => g.bookId === bookId);
     const { data, error } = await supabase.from('groups').select('*').eq('bookId', bookId);
     if (error) throw error;
     return data || [];
   }
 
   static async getGroupById(id: string): Promise<Group | null> {
-    if (this.useLocalStorage()) {
-      const groups = JSON.parse(localStorage.getItem(DB_KEYS.groups) || '[]');
-      return groups.find((g: Group) => g.id === id) || null;
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.groups) || '[]').find((g: Group) => g.id === id) || null;
     const { data, error } = await supabase.from('groups').select('*').eq('id', id).single();
     if (error) return null;
     return data;
@@ -554,14 +496,13 @@ class Database {
       localStorage.setItem(DB_KEYS.groups, JSON.stringify(groups));
       return newGroup;
     }
-    const now = new Date().toISOString();
-    const newGroup = {
-      ...group,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    const { data, error } = await supabase.from('groups').insert(newGroup).select().single();
+    const { data, error } = await supabase.from('groups').insert({
+      "name": group.name,
+      "bookId": group.bookId,
+      "languageId": group.languageId,
+      "studentIds": group.studentIds || [],
+      "unlockedUnitIds": group.unlockedUnitIds || []
+    }).select().single();
     if (error) throw error;
     return data;
   }
@@ -575,10 +516,14 @@ class Database {
       localStorage.setItem(DB_KEYS.groups, JSON.stringify(groups));
       return groups[index];
     }
-    const { data, error } = await supabase.from('groups').update({
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    }).eq('id', id).select().single();
+
+    const mapped: any = { "updatedAt": new Date().toISOString() };
+    if (updates.name !== undefined) mapped["name"] = updates.name;
+    if (updates.bookId !== undefined) mapped["bookId"] = updates.bookId;
+    if (updates.studentIds !== undefined) mapped["studentIds"] = updates.studentIds;
+    if (updates.unlockedUnitIds !== undefined) mapped["unlockedUnitIds"] = updates.unlockedUnitIds;
+
+    const { data, error } = await supabase.from('groups').update(mapped).eq('id', id).select().single();
     if (error) throw error;
     return data;
   }
@@ -591,20 +536,6 @@ class Database {
       return;
     }
     await supabase.from('groups').delete().eq('id', id);
-  }
-
-  static async addStudentToGroup(groupId: string, studentId: string): Promise<void> {
-    const group = await this.getGroupById(groupId);
-    if (!group) return;
-    if (!group.studentIds.includes(studentId)) {
-      await this.updateGroup(groupId, { studentIds: [...group.studentIds, studentId] });
-    }
-  }
-
-  static async removeStudentFromGroup(groupId: string, studentId: string): Promise<void> {
-    const group = await this.getGroupById(groupId);
-    if (!group) return;
-    await this.updateGroup(groupId, { studentIds: group.studentIds.filter(id => id !== studentId) });
   }
 
   static async unlockUnitForGroup(groupId: string, unitId: string): Promise<void> {
@@ -625,44 +556,24 @@ class Database {
   // USER ANKI CARDS
   // ============================================
   static async getUserAnkiCards(userId: string): Promise<UserAnkiCard[]> {
-    if (this.useLocalStorage()) {
-      const cards = JSON.parse(localStorage.getItem(DB_KEYS.ankiCards) || '[]');
-      return cards.filter((c: UserAnkiCard) => c.userId === userId);
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.ankiCards) || '[]').filter((c: UserAnkiCard) => c.userId === userId);
     const { data, error } = await supabase.from('user_anki_cards').select('*').eq('userId', userId);
     if (error) throw error;
     return data || [];
   }
 
   static async getDueCards(userId: string): Promise<UserAnkiCard[]> {
+    const now = new Date().toISOString();
     if (this.useLocalStorage()) {
-      const now = new Date().toISOString();
-      const cards = JSON.parse(localStorage.getItem(DB_KEYS.ankiCards) || '[]');
-      return cards.filter((c: UserAnkiCard) => 
-        c.userId === userId && 
-        c.nextReviewDate <= now && 
-        c.status !== 'mastered'
+      return JSON.parse(localStorage.getItem(DB_KEYS.ankiCards) || '[]').filter((c: UserAnkiCard) => 
+        c.userId === userId && c.nextReviewDate <= now && c.status !== 'mastered'
       );
     }
-    const now = new Date().toISOString();
     const { data, error } = await supabase.from('user_anki_cards')
       .select('*')
       .eq('userId', userId)
       .lte('nextReviewDate', now)
       .neq('status', 'mastered');
-    if (error) throw error;
-    return data || [];
-  }
-
-  static async getNewCards(userId: string): Promise<UserAnkiCard[]> {
-    if (this.useLocalStorage()) {
-      const cards = JSON.parse(localStorage.getItem(DB_KEYS.ankiCards) || '[]');
-      return cards.filter((c: UserAnkiCard) => c.userId === userId && c.status === 'new');
-    }
-    const { data, error } = await supabase.from('user_anki_cards')
-      .select('*')
-      .eq('userId', userId)
-      .eq('status', 'new');
     if (error) throw error;
     return data || [];
   }
@@ -675,11 +586,12 @@ class Database {
       localStorage.setItem(DB_KEYS.ankiCards, JSON.stringify(cards));
       return newCard;
     }
-    const newCard = {
+    const { data, error } = await supabase.from('user_anki_cards').insert({
       ...card,
-      id: crypto.randomUUID(),
-    };
-    const { data, error } = await supabase.from('user_anki_cards').insert(newCard).select().single();
+      "userId": card.userId,
+      "sessionId": card.sessionId,
+      "unitId": card.unitId
+    }).select().single();
     if (error) throw error;
     return data;
   }
@@ -698,27 +610,10 @@ class Database {
     return data;
   }
 
-  // Alias for backward compatibility
-  static async updateAnkiCard(id: string, updates: Partial<UserAnkiCard>): Promise<UserAnkiCard | null> {
-    return this.updateUserAnkiCard(id, updates);
-  }
-
-  static async deleteUserAnkiCard(id: string): Promise<void> {
-    if (this.useLocalStorage()) {
-      const cards = JSON.parse(localStorage.getItem(DB_KEYS.ankiCards) || '[]');
-      const filtered = cards.filter((c: UserAnkiCard) => c.id !== id);
-      localStorage.setItem(DB_KEYS.ankiCards, JSON.stringify(filtered));
-      return;
-    }
-    await supabase.from('user_anki_cards').delete().eq('id', id);
-  }
-
   static async addAnkiCardsToUser(userId: string, unitId: string, sessionId: string, cards: AnkiCard[]): Promise<UserAnkiCard[]> {
     const existingCards = await this.getUserAnkiCards(userId);
     const newCards: UserAnkiCard[] = [];
-    
     for (const card of cards) {
-      // Check if card already exists
       const exists = existingCards.some(c => c.cardId === card.id && c.sessionId === sessionId);
       if (!exists) {
         const newCard = await this.createUserAnkiCard({
@@ -730,7 +625,7 @@ class Database {
           back: card.back,
           example: card.example,
           pronunciation: card.pronunciation,
-          stability: 3.173, // FSRS default for Good
+          stability: 3.173,
           difficulty: 5,
           interval: 0,
           repetitions: 0,
@@ -741,7 +636,6 @@ class Database {
         newCards.push(newCard);
       }
     }
-    
     return newCards;
   }
 
@@ -749,37 +643,21 @@ class Database {
   // USER PROGRESS
   // ============================================
   static async getUserProgress(userId: string): Promise<UserProgress[]> {
-    if (this.useLocalStorage()) {
-      const progress = JSON.parse(localStorage.getItem(DB_KEYS.progress) || '[]');
-      return progress.filter((p: UserProgress) => p.userId === userId);
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.progress) || '[]').filter((p: UserProgress) => p.userId === userId);
     const { data, error } = await supabase.from('user_progress').select('*').eq('userId', userId);
     if (error) throw error;
     return data || [];
   }
 
-  // Alias for backward compatibility
-  static async getProgressByUser(userId: string): Promise<UserProgress[]> {
-    return this.getUserProgress(userId);
-  }
-
   static async getProgressBySession(userId: string, sessionId: string): Promise<UserProgress | null> {
-    if (this.useLocalStorage()) {
-      const progress = JSON.parse(localStorage.getItem(DB_KEYS.progress) || '[]');
-      return progress.find((p: UserProgress) => p.userId === userId && p.sessionId === sessionId) || null;
-    }
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.progress) || '[]').find((p: UserProgress) => p.userId === userId && p.sessionId === sessionId) || null;
     const { data, error } = await supabase.from('user_progress')
       .select('*')
       .eq('userId', userId)
       .eq('sessionId', sessionId)
-      .single();
+      .maybeSingle();
     if (error) return null;
     return data;
-  }
-
-  static async isSessionCompleted(userId: string, sessionId: string): Promise<boolean> {
-    const progress = await this.getProgressBySession(userId, sessionId);
-    return progress?.completed ?? false;
   }
 
   static async createUserProgress(progress: Omit<UserProgress, 'id'>): Promise<UserProgress> {
@@ -790,11 +668,14 @@ class Database {
       localStorage.setItem(DB_KEYS.progress, JSON.stringify(allProgress));
       return newProgress;
     }
-    const newProgress = {
-      ...progress,
-      id: crypto.randomUUID(),
-    };
-    const { data, error } = await supabase.from('user_progress').insert(newProgress).select().single();
+    const { data, error } = await supabase.from('user_progress').insert({
+      "userId": progress.userId,
+      "unitId": progress.unitId,
+      "sessionId": progress.sessionId,
+      "completed": progress.completed,
+      "ankiCardsAdded": progress.ankiCardsAdded,
+      "completedAt": progress.completedAt
+    }).select().single();
     if (error) throw error;
     return data;
   }
@@ -836,24 +717,27 @@ class Database {
   // USER STATS
   // ============================================
   static async getUserStats(userId: string): Promise<UserStats | null> {
-    if (this.useLocalStorage()) {
-      const stats = JSON.parse(localStorage.getItem(DB_KEYS.stats) || '[]');
-      return stats.find((s: UserStats) => s.userId === userId) || null;
-    }
-    const { data, error } = await supabase.from('user_stats').select('*').eq('userId', userId).single();
+    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem(DB_KEYS.stats) || '[]').find((s: UserStats) => s.userId === userId) || null;
+    const { data, error } = await supabase.from('user_stats').select('*').eq('userId', userId).maybeSingle();
     if (error) return null;
     return data;
   }
 
-  static async createUserStats(stats: Omit<UserStats, 'id'>): Promise<UserStats> {
+  static async createUserStats(stats: UserStats): Promise<UserStats> {
     if (this.useLocalStorage()) {
       const allStats = JSON.parse(localStorage.getItem(DB_KEYS.stats) || '[]');
-      const newStats = { ...stats, id: crypto.randomUUID() };
-      allStats.push(newStats);
+      allStats.push(stats);
       localStorage.setItem(DB_KEYS.stats, JSON.stringify(allStats));
-      return newStats;
+      return stats;
     }
-    const { data, error } = await supabase.from('user_stats').insert(stats).select().single();
+    const { data, error } = await supabase.from('user_stats').insert({
+      "userId": stats.userId,
+      "totalStudyTime": stats.totalStudyTime,
+      "streakDays": stats.streakDays,
+      "totalWordsLearned": stats.totalWordsLearned,
+      "totalUnitsCompleted": stats.totalUnitsCompleted,
+      "lastStudyDate": stats.lastStudyDate
+    }).select().single();
     if (error) throw error;
     return data;
   }
@@ -862,9 +746,7 @@ class Database {
     if (this.useLocalStorage()) {
       const stats = JSON.parse(localStorage.getItem(DB_KEYS.stats) || '[]');
       const index = stats.findIndex((s: UserStats) => s.userId === userId);
-      if (index === -1) {
-        return this.createUserStats({ userId, ...updates } as UserStats);
-      }
+      if (index === -1) return this.createUserStats({ userId, ...updates } as UserStats);
       stats[index] = { ...stats[index], ...updates };
       localStorage.setItem(DB_KEYS.stats, JSON.stringify(stats));
       return stats[index];
@@ -881,21 +763,13 @@ class Database {
     if (stats) {
       const lastStudyDate = stats.lastStudyDate?.split('T')[0];
       let streakDays = stats.streakDays;
-      
-      // Check if this is a consecutive day
       if (lastStudyDate) {
         const lastDate = new Date(lastStudyDate);
         const todayDate = new Date(today);
         const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 1) {
-          streakDays++;
-        } else if (diffDays > 1) {
-          streakDays = 1;
-        }
-      } else {
-        streakDays = 1;
-      }
+        if (diffDays === 1) streakDays++;
+        else if (diffDays > 1) streakDays = 1;
+      } else streakDays = 1;
       
       await this.updateUserStats(userId, {
         totalStudyTime: (stats.totalStudyTime || 0) + duration,
