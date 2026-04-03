@@ -42,6 +42,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [showLanguageDialog, setShowLanguageDialog] = useState(false);
   const [showBookDialog, setShowBookDialog] = useState(false);
   const [showUnitDialog, setShowUnitDialog] = useState(false);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [showSessionDialog, setShowSessionDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
@@ -49,6 +50,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [editingLanguage, setEditingLanguage] = useState<Language | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [selectedUnitForSession, setSelectedUnitForSession] = useState<Unit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string; extra?: string } | null>(null);
@@ -65,6 +67,8 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [unitName, setUnitName] = useState('');
   const [unitBookId, setUnitBookId] = useState('');
   const [unitDescription, setUnitDescription] = useState('');
+  const [groupName, setGroupName] = useState('');
+  const [groupBookId, setGroupBookId] = useState('');
   const [sessionName, setSessionName] = useState('');
   const [sessionEmoji, setSessionEmoji] = useState('');
   const [sessionHtml, setSessionHtml] = useState('');
@@ -158,7 +162,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
 
       if (existingSession) {
-        // Correção aplicada aqui também para Bulk Upload
         await Database.updateSession(existingSession.id, {
           "htmlContent": sessionData.content,
           "ankiCards": ankiCards,
@@ -188,7 +191,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     if (updatedUnit) {
       setSelectedUnitForSession(updatedUnit);
     }
-
     setShowBulkUploadDialog(false);
   };
 
@@ -312,7 +314,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }).filter(c => c.front && c.back);
     }
 
-    // Correção essencial com aspas duplas nas chaves do objeto
     await Database.updateSession(editingSession.id, {
       "name": sessionName,
       "emoji": sessionEmoji,
@@ -340,6 +341,33 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setSessionHtml('');
     setSessionAnki('');
     setEditingSession(null);
+  };
+
+  const handleSaveGroup = async () => {
+    if (editingGroup) {
+      await Database.updateGroup(editingGroup.id, {
+        name: groupName,
+        "bookId": groupBookId,
+      });
+    } else {
+      const book = await Database.getBookById(groupBookId);
+      await Database.createGroup({
+        name: groupName,
+        "bookId": groupBookId,
+        "languageId": book?.languageId || '',
+        "studentIds": [],
+        "unlockedUnitIds": [],
+      });
+    }
+    setShowGroupDialog(false);
+    resetGroupForm();
+    await loadData();
+  };
+
+  const resetGroupForm = () => {
+    setGroupName('');
+    setGroupBookId('');
+    setEditingGroup(null);
   };
 
   const handleUnlockUnit = async (groupId: string, unitId: string) => {
@@ -504,6 +532,9 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           <TabsContent value="groups">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">{t('groups')}</h2>
+              <Button onClick={() => { resetGroupForm(); setShowGroupDialog(true); }} className="bg-[#1a3673] hover:bg-[#142a5a] text-white">
+                <Plus className="w-4 h-4 mr-2" />{t('addGroup')}
+              </Button>
             </div>
             <div className="grid gap-4">
               {groups.map(group => {
@@ -520,6 +551,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                           <p className="text-sm text-gray-500">{group.unlockedUnitIds.length} / {groupUnits.length} {t('units')} {t('unlocked')}</p>
                         </div>
                         <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => { setEditingGroup(group); setGroupName(group.name); setGroupBookId(group.bookId); setShowGroupDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
                           <Button variant="outline" size="sm" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'group', id: group.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
                         </div>
                       </div>
@@ -567,7 +599,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         </Tabs>
       </main>
 
-      {/* Dialogs */}
       <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingLanguage ? '编辑语言' : t('addLanguage')}</DialogTitle></DialogHeader>
@@ -598,6 +629,17 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             {!editingUnit && (<div><Label>所属教材</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger><SelectValue placeholder="选择教材" /></SelectTrigger><SelectContent>{books.map(book => (<SelectItem key={book.id} value={book.id}>{book.name}</SelectItem>))}</SelectContent></Select></div>)}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setShowUnitDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingGroup ? '编辑小组' : t('addGroup')}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>小组名称</Label><Input value={groupName} onChange={e => setGroupName(e.target.value)} /></div>
+            <div><Label>选择教材</Label><Select value={groupBookId} onValueChange={setGroupBookId}><SelectTrigger><SelectValue placeholder="选择教材" /></SelectTrigger><SelectContent>{books.map(book => (<SelectItem key={book.id} value={book.id}>{book.name}</SelectItem>))}</SelectContent></Select></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowGroupDialog(false)}>{t('cancel')}</Button><Button onClick={handleSaveGroup} className="bg-[#1a3673] text-white">{t('save')}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
