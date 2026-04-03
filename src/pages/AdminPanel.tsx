@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Database from '@/lib/database';
 import type { Language, Book, Unit, Group, User, Session } from '@/types';
@@ -15,8 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Edit2, Trash2, Users, BookOpen, Globe, 
   Layers, GraduationCap, Eye,
-  Save, Check, Upload,
-  ArrowUpDown, Lock
+  Save, Check, Upload, Lock
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
