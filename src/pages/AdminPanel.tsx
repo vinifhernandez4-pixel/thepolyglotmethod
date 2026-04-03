@@ -158,6 +158,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }
 
       if (existingSession) {
+        // Correção aplicada aqui também para Bulk Upload
         await Database.updateSession(existingSession.id, {
           "htmlContent": sessionData.content,
           "ankiCards": ankiCards,
@@ -311,6 +312,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }).filter(c => c.front && c.back);
     }
 
+    // Correção essencial com aspas duplas nas chaves do objeto
     await Database.updateSession(editingSession.id, {
       "name": sessionName,
       "emoji": sessionEmoji,
