@@ -1,20 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Database from '@/lib/database';
 import type { Language, Book, Unit, Group, User, Session } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Plus, Edit2, Trash2, Users, BookOpen, Globe, 
-  Layers, GraduationCap, Eye, X,
-  Check, Upload, ArrowUpDown, Lock as LockIcon
+  Plus, Edit2, Trash2, Eye, X, Check, Upload, Lock as LockIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -24,8 +21,7 @@ interface AdminPanelProps {
 
 const EMOJI_OPTIONS = [
   '👀', '📝', '📚', '🎧', '🎮', '🎯', '💡', '🔤', 
-  '🗣️', '👂', '✍️', '📖', '🎬', '🎵', '🧩', '🏆',
-  '⭐', '💬', '📋', '🔍', '💭', '🎨', '📊', '🔢'
+  '🗣️', '👂', '✍️', '📖', '🎬', '🎵', '🧩', '🏆'
 ];
 
 export default function AdminPanel({ onLogout }: AdminPanelProps) {
@@ -46,28 +42,18 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddStudentDialog, setShowAddStudentDialog] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
-  const [showUnitOrderDialog, setShowUnitOrderDialog] = useState(false);
 
   const [editingLanguage, setEditingLanguage] = useState<Language | null>(null);
-  const [editingBook, setEditingBook] = useState<Book | null>(null);
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [selectedUnitForSession, setSelectedUnitForSession] = useState<Unit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string; extra?: string } | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const bulkUploadRef = useRef<HTMLInputElement>(null);
-
   const [languageName, setLanguageName] = useState('');
-  const [languageNameEn, setLanguageNameEn] = useState('');
-  const [languageAvatar, setLanguageAvatar] = useState('');
   const [bookName, setBookName] = useState('');
   const [bookLanguageId, setBookLanguageId] = useState('');
-  const [bookAvatar, setBookAvatar] = useState('');
   const [unitName, setUnitName] = useState('');
   const [unitBookId, setUnitBookId] = useState('');
-  const [unitDescription, setUnitDescription] = useState('');
   const [groupName, setGroupName] = useState('');
   const [groupBookId, setGroupBookId] = useState('');
   const [sessionName, setSessionName] = useState('');
@@ -94,14 +80,6 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     setEditingSession(null);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => { setSessionHtml(e.target?.result as string); };
-    reader.readAsText(file);
-  };
-
   const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !selectedUnitForSession) return;
@@ -118,21 +96,23 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   };
 
   const handleSaveLanguage = async () => {
-    if (editingLanguage) await Database.updateLanguage(editingLanguage.id, { name: languageName, nameEn: languageNameEn, avatar: languageAvatar });
-    else await Database.createLanguage({ name: languageName, nameEn: languageNameEn, avatar: languageAvatar });
+    if (editingLanguage) await Database.updateLanguage(editingLanguage.id, { name: languageName });
+    else await Database.createLanguage({ name: languageName, nameEn: languageName, avatar: '' });
     setShowLanguageDialog(false); loadData();
   };
 
   const handleSaveBook = async () => {
-    if (editingBook) await Database.updateBook(editingBook.id, { name: bookName, languageId: bookLanguageId, avatar: bookAvatar });
-    else await Database.createBook({ name: bookName, languageId: bookLanguageId, avatar: bookAvatar, order: books.length + 1 });
-    setShowBookDialog(false); loadData();
+    if (bookLanguageId) {
+      await Database.createBook({ name: bookName, languageId: bookLanguageId, avatar: '', order: books.length + 1 });
+      setShowBookDialog(false); loadData();
+    }
   };
 
   const handleSaveUnit = async () => {
-    if (editingUnit) await Database.updateUnit(editingUnit.id, { name: unitName, description: unitDescription });
-    else await Database.createUnit({ bookId: unitBookId, name: unitName, description: unitDescription, order: units.length + 1 });
-    setShowUnitDialog(false); loadData();
+    if (unitBookId) {
+      await Database.createUnit({ bookId: unitBookId, name: unitName, description: '', order: units.length + 1 });
+      setShowUnitDialog(false); loadData();
+    }
   };
 
   const handleSaveSession = async () => {
@@ -145,7 +125,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       }).filter(c => c.front && c.back);
     }
     await Database.updateSession(editingSession.id, { "name": sessionName, "emoji": sessionEmoji, "htmlContent": sessionHtml, "ankiCards": ankiCards });
-    setEditingSession(null); resetSessionForm(); loadData();
+    resetSessionForm(); loadData();
   };
 
   const handleSaveGroup = async () => {
@@ -167,7 +147,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
   const openEditSession = (unit: Unit, session: Session) => {
     setSelectedUnitForSession(unit); setEditingSession(session); setSessionName(session.name); setSessionEmoji(session.emoji);
-    setSessionHtml(session.htmlContent); setSessionAnki(JSON.stringify(session.ankiCards, null, 2));
+    setSessionHtml(session.htmlContent); setSessionAnki(JSON.stringify(session.ankiCards, null, 2)); setShowSessionDialog(true);
   };
 
   if (isLoading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
@@ -219,7 +199,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                     </div>
                   </div>
                   <div className="border-t pt-4">
-                    <p className="font-medium mb-2">Units Access</p>
+                    <p className="font-medium mb-2">Access</p>
                     <div className="flex flex-wrap gap-2">
                       {groupUnits.map(u => (
                         <Button key={u.id} size="sm" variant={g.unlockedUnitIds.includes(u.id) ? "default" : "outline"} onClick={() => g.unlockedUnitIds.includes(u.id) ? Database.lockUnitForGroup(g.id, u.id).then(loadData) : Database.unlockUnitForGroup(g.id, u.id).then(loadData)}>
@@ -240,7 +220,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
             })}
           </div>
         </TabsContent>
-        {/* Outras abas (Books, Units, Students) simplificadas para build liso */}
+
         <TabsContent value="books">
           <Button onClick={() => setShowBookDialog(true)} className="mb-4">Add Book</Button>
           {books.map(b => <div key={b.id} className="p-2 border-b flex justify-between"><span>{b.name}</span><Trash2 className="w-4 h-4 cursor-pointer" onClick={() => { setItemToDelete({type: 'book', id: b.id}); setShowDeleteConfirm(true); }} /></div>)}
@@ -254,8 +234,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         </TabsContent>
       </Tabs>
 
-      {/* DIALOGS */}
-      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent><Input value={languageName} onChange={e => setLanguageName(e.target.value)} placeholder="Language Name" /><DialogFooter><Button onClick={handleSaveLanguage}>Save</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent><Input value={languageName} onChange={e => setLanguageName(e.target.value)} placeholder="Name" /><DialogFooter><Button onClick={handleSaveLanguage}>Save</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}><DialogContent><Input value={bookName} onChange={e => setBookName(e.target.value)} placeholder="Book Name" /><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger><SelectValue placeholder="Lang" /></SelectTrigger><SelectContent>{languages.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select><DialogFooter><Button onClick={handleSaveBook}>Save</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}><DialogContent><Input value={unitName} onChange={e => setUnitName(e.target.value)} placeholder="Unit Name" /><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger><SelectValue placeholder="Book" /></SelectTrigger><SelectContent>{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><DialogFooter><Button onClick={handleSaveUnit}>Save</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}><DialogContent><Input value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Group Name" /><Select value={groupBookId} onValueChange={setGroupBookId}><SelectTrigger><SelectValue placeholder="Book" /></SelectTrigger><SelectContent>{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select><DialogFooter><Button onClick={handleSaveGroup}>Save</Button></DialogFooter></DialogContent></Dialog>
@@ -263,7 +242,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
       <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}><DialogContent className="max-w-2xl"><div className="flex justify-between mb-4"><h2 className="font-bold">Sessions</h2><div className="flex gap-2"><Button size="sm" onClick={() => setShowBulkUploadDialog(true)}><Upload className="w-4 h-4 mr-1" />Bulk</Button></div></div><ScrollArea className="h-80">{selectedUnitForSession?.sessions.map(s => <div key={s.id} className="p-2 border-b flex justify-between"><span>{s.name}</span><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => openEditSession(selectedUnitForSession!, s)}><Edit2 className="w-3 h-3" /></Button><Button size="sm" variant="outline" onClick={() => {setItemToDelete({type:'session', id:s.id}); setShowDeleteConfirm(true);}}><Trash2 className="w-3 h-3" /></Button></div></div>)}</ScrollArea></DialogContent></Dialog>
       <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}><DialogContent className="max-w-4xl"><Input value={sessionName} onChange={e => setSessionName(e.target.value)} /><Textarea className="h-60" value={sessionHtml} onChange={e => setSessionHtml(e.target.value)} /><Textarea value={sessionAnki} onChange={e => setSessionAnki(e.target.value)} placeholder="Anki cards..." /><DialogFooter><Button onClick={handleSaveSession}>Save</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={showBulkUploadDialog} onOpenChange={setShowBulkUploadDialog}><DialogContent><input type="file" multiple onChange={handleBulkUpload} /><DialogFooter><Button onClick={() => setShowBulkUploadDialog(false)}>Close</Button></DialogFooter></DialogContent></Dialog>
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent><DialogFooter><Button variant="destructive" onClick={handleDelete}>Delete</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent><DialogFooter><Button variant="destructive" onClick={handleDelete}>{t('delete')}</Button></DialogFooter></DialogContent></Dialog>
     </div>
   );
 }
