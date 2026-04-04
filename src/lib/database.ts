@@ -183,7 +183,7 @@ class Database {
     await supabase.from('sessions').delete().eq('id', id);
   }
 
-  // --- GROUPS (CORREÇÃO UUID ERROR) ---
+  // --- GROUPS ---
   static async getGroups(): Promise<Group[]> {
     const { data } = await supabase.from('groups').select('*');
     return data || [];
@@ -195,13 +195,11 @@ class Database {
   }
 
   static async createGroup(g: any): Promise<Group> {
-    // CORREÇÃO: Não enviamos strings vazias para colunas UUID
     const payload: any = { name: g.name };
     if (g.bookId && g.bookId !== "") payload.bookId = g.bookId;
     if (g.languageId && g.languageId !== "") payload.languageId = g.languageId;
-    
-    payload.studentIds = g.studentIds || [];
-    payload.unlockedUnitIds = g.unlockedUnitIds || [];
+    payload.studentIds = [];
+    payload.unlockedUnitIds = [];
 
     const { data, error } = await supabase.from('groups').insert(payload).select().single();
     if (error) throw error;
