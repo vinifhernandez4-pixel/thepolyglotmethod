@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -116,8 +116,9 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   };
 
   const handleSaveGroup = async () => {
+    const p = { name: groupName, bookId: groupBookId, languageId: '', studentIds: [], unlockedUnitIds: [] };
     if (editingGroup) await Database.updateGroup(editingGroup.id, { name: groupName, bookId: groupBookId });
-    else await Database.createGroup({ name: groupName, bookId: groupBookId, languageId: '', studentIds: [], unlockedUnitIds: [] });
+    else await Database.createGroup(p);
     setShowGroupDialog(false); loadData();
   };
 
@@ -159,7 +160,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                 <Card key={l.id} className="bg-white"><CardContent className="p-4 flex justify-between items-center text-gray-800">
                   <div className="flex items-center gap-2">{l.avatar && <img src={l.avatar} className="w-6 h-6 rounded-full"/>}<span>{l.name}</span></div>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditingLanguage(l); setLanguageName(l.name); setLanguageNameEn(l.nameEn); setLanguageAvatar(l.avatar); setShowLanguageDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingLanguage(l); setLanguageName(l.name); setLanguageNameEn(l.nameEn || ''); setLanguageAvatar(l.avatar || ''); setShowLanguageDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
                     <Button size="sm" variant="ghost" className="text-red-500" onClick={() => { setItemToDelete({ type: 'language', id: l.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </CardContent></Card>
@@ -173,7 +174,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
               {groups.map(g => (
                 <Card key={g.id} className="bg-white"><CardContent className="p-4">
                   <div className="flex justify-between border-b pb-2 mb-4">
-                    <h3 className="font-bold text-[#1a3673]">{g.name}</h3>
+                    <div><h3 className="font-bold text-[#1a3673]">{g.name}</h3></div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => { setEditingGroup(g); setGroupName(g.name); setGroupBookId(g.bookId); setShowGroupDialog(true); }}><Edit2 className="w-4 h-4"/></Button>
                       <Button size="sm" variant="outline" className="text-red-500" onClick={() => { setItemToDelete({ type: 'group', id: g.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
@@ -183,7 +184,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                     <Label className="text-xs font-bold text-gray-500 uppercase">Units Access</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {units.filter(u => u.bookId === g.bookId).map(u => (
-                        <Button key={u.id} size="sm" variant={g.unlockedUnitIds.includes(u.id) ? "default" : "outline"} className={g.unlockedUnitIds.includes(u.id) ? "bg-emerald-600 text-white" : "text-gray-500"} onClick={() => g.unlockedUnitIds.includes(u.id) ? Database.lockUnitForGroup(g.id, u.id).then(loadData) : Database.unlockUnitForGroup(g.id, u.id).then(loadData)}>
+                        <Button key={u.id} size="sm" variant={g.unlockedUnitIds.includes(u.id) ? "default" : "outline"} className={g.unlockedUnitIds.includes(u.id) ? "bg-emerald-600" : ""} onClick={() => g.unlockedUnitIds.includes(u.id) ? Database.lockUnitForGroup(g.id, u.id).then(loadData) : Database.unlockUnitForGroup(g.id, u.id).then(loadData)}>
                           {g.unlockedUnitIds.includes(u.id) ? <Check className="w-3 h-3 mr-1" /> : <LockIcon className="w-3 h-3 mr-1" />} {u.name}
                         </Button>
                       ))}
@@ -209,7 +210,10 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                   {b.avatar && <img src={b.avatar} className="w-8 h-10 object-cover rounded border"/>}
                   <span>{b.name}</span>
                 </div>
-                <Trash2 className="w-4 h-4 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'book', id:b.id}); setShowDeleteConfirm(true); }} />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingBook(b); setBookName(b.name); setBookLanguageId(b.languageId); setBookAvatar(b.avatar); setShowBookDialog(true); }}><Edit2 className="w-4 h-4"/></Button>
+                  <Trash2 className="w-4 h-4 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'book', id:b.id}); setShowDeleteConfirm(true); }} />
+                </div>
               </CardContent></Card>
             ))}
           </TabsContent>
@@ -228,6 +232,7 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
                           <span>{u.name}</span>
                           <div className="flex gap-3">
                             <Eye className="w-5 h-5 text-emerald-600 cursor-pointer" onClick={() => { setSelectedUnitForSession(u); setShowSessionDialog(true); }} />
+                            <Edit2 className="w-5 h-5 text-gray-400 cursor-pointer" onClick={() => { setEditingUnit(u); setUnitName(u.name); setUnitBookId(u.bookId); setShowUnitDialog(true); }} />
                             <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'unit', id:u.id}); setShowDeleteConfirm(true); }} />
                           </div>
                         </div>
@@ -245,56 +250,45 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
         </Tabs>
       </main>
 
-      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Language</DialogTitle></DialogHeader>
+      {/* DIALOGS */}
+      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent className="bg-white text-gray-900">
+        <DialogHeader><DialogTitle className="text-[#1a3673]">Language</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div><Label>Native Name</Label><Input value={languageName} onChange={e => setLanguageName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-          <div><Label>English Name</Label><Input value={languageNameEn} onChange={e => setLanguageNameEn(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-          <div><Label>Avatar URL</Label><Input value={languageAvatar} onChange={e => setLanguageAvatar(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          <div><Label className="text-gray-700">Native Name</Label><Input value={languageName} onChange={e => setLanguageName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          <div><Label className="text-gray-700">English Name</Label><Input value={languageNameEn} onChange={e => setLanguageNameEn(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          <div><Label className="text-gray-700">Avatar URL</Label><Input value={languageAvatar} onChange={e => setLanguageAvatar(e.target.value)} className="text-gray-900 border-gray-300" /></div>
         </div>
         <DialogFooter><Button onClick={handleSaveLanguage} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Book</DialogTitle></DialogHeader>
+      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}><DialogContent className="bg-white text-gray-900">
+        <DialogHeader><DialogTitle className="text-[#1a3673]">Book</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div><Label>Title</Label><Input value={bookName} onChange={e => setBookName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-          <div><Label>Cover URL</Label><Input value={bookAvatar} onChange={e => setBookAvatar(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-          <div><Label>Language</Label><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger className="text-gray-900 border-gray-300"><SelectValue placeholder="Lang"/></SelectTrigger><SelectContent className="bg-white">{languages.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label className="text-gray-700">Title</Label><Input value={bookName} onChange={e => setBookName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          <div><Label className="text-gray-700">Cover URL</Label><Input value={bookAvatar} onChange={e => setBookAvatar(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          <div><Label className="text-gray-700">Language</Label><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger className="text-gray-900 border-gray-300"><SelectValue placeholder="Select Language"/></SelectTrigger><SelectContent className="bg-white">{languages.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
         </div>
-        <DialogFooter><Button onClick={handleSaveBook} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent></Dialog>
+        <DialogFooter><Button onClick={handleSaveBook} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent>
 
-      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Unit</DialogTitle></DialogHeader>
+      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}><DialogContent className="bg-white text-gray-900">
+        <DialogHeader><DialogTitle className="text-[#1a3673]">Unit</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div><Label>Unit Name</Label><Input value={unitName} onChange={e => setUnitName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-          {!editingUnit && (<div><Label>Book</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger className="text-gray-900 border-gray-300"><SelectValue placeholder="Book"/></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>)}
+          <div><Label className="text-gray-700">Unit Name</Label><Input value={unitName} onChange={e => setUnitName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          {!editingUnit && (<div><Label className="text-gray-700">Book</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger className="text-gray-900 border-gray-300"><SelectValue placeholder="Select Book"/></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>)}
         </div>
-        <DialogFooter><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">Save Unit</Button></DialogFooter></DialogContent></Dialog>
+        <DialogFooter><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">Save Unit</Button></DialogFooter></DialogContent>
 
-      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Group</DialogTitle></DialogHeader>
+      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}><DialogContent className="bg-white text-gray-900">
+        <DialogHeader><DialogTitle className="text-[#1a3673]">Group</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div><Label>Group Name</Label><Input value={groupName} onChange={e => setGroupName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-          <div><Label>Book</Label><Select value={groupBookId} onValueChange={setGroupBookId}><SelectTrigger className="text-gray-900 border-gray-300"><SelectValue placeholder="Book"/></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
+          <div><Label className="text-gray-700">Group Name</Label><Input value={groupName} onChange={e => setGroupName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
+          <div><Label className="text-gray-700">Book</Label><Select value={groupBookId} onValueChange={setGroupBookId}><SelectTrigger className="text-gray-900 border-gray-300"><SelectValue placeholder="Select Book"/></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
         </div>
-        <DialogFooter><Button onClick={handleSaveGroup} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent></Dialog>
+        <DialogFooter><Button onClick={handleSaveGroup} className="bg-[#1a3673] text-white">Save Group</Button></DialogFooter></DialogContent>
 
-      <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Add Student</DialogTitle></DialogHeader>
+      <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}><DialogContent className="bg-white text-gray-900">
+        <DialogHeader><DialogTitle className="text-[#1a3673]">Add Student</DialogTitle></DialogHeader>
         <ScrollArea className="h-60">{students.filter(s => !editingGroup?.studentIds.includes(s.id)).map(s => <div key={s.id} className="p-3 border-b hover:bg-gray-50 cursor-pointer flex justify-between" onClick={() => editingGroup && Database.addStudentToGroup(editingGroup.id, s.id).then(loadData)}><span>{s.name}</span><Plus className="w-4 h-4"/></div>)}</ScrollArea>
       </DialogContent></Dialog>
       
       <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}><DialogContent className="max-w-2xl bg-white text-gray-900"><DialogHeader><DialogTitle className="flex justify-between text-[#1a3673]">Unit Sessions <Button size="sm" className="bg-[#c5a059]" onClick={() => { if(selectedUnitForSession) Database.addSessionToUnit(selectedUnitForSession.id, { name: 'New Session', emoji: '🎮', order: selectedUnitForSession.sessions.length + 1 }).then(loadData); }}>+ Add</Button></DialogTitle></DialogHeader>
-        <ScrollArea className="h-80">{selectedUnitForSession?.sessions.sort((a,b)=>a.order-b.order).map(s => <div key={s.id} className="p-3 border-b flex justify-between items-center text-gray-900"><span>{s.emoji} {s.name}</span><div className="flex gap-2"><Button size="sm" variant="outline" className="text-[#1a3673]" onClick={() => { setEditingSession(s); setSessionName(s.name); setSessionEmoji(s.emoji); setSessionHtml(s.htmlContent); setSessionAnki(JSON.stringify(s.ankiCards, null, 2)); setShowSessionDialog(false); }}><Edit2 className="w-3 h-3"/></Button><Button size="sm" variant="outline" className="text-red-500 border-red-100" onClick={() => {setItemToDelete({type:'session', id:s.id}); setShowDeleteConfirm(true);}}><Trash2 className="w-3 h-3"/></Button></div></div>)}</ScrollArea>
-      </DialogContent></Dialog>
-
-      <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}><DialogContent className="max-w-5xl bg-white text-gray-900 max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Edit Session</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <Input value={sessionName} onChange={e => setSessionName(e.target.value)} className="text-gray-900 border-gray-300" />
-          <div className="flex gap-2 flex-wrap">{EMOJI_OPTIONS.map(e => <button key={e} onClick={() => setSessionEmoji(e)} className={`p-2 rounded text-xl ${sessionEmoji === e ? 'bg-blue-100 ring-2 ring-[#1a3673]' : ''}`}>{e}</button>)}</div>
-          <Textarea className="h-60 font-mono text-xs text-gray-900 border-gray-300" value={sessionHtml} onChange={e => setSessionHtml(e.target.value)} placeholder="Paste HTML" />
-          <Textarea className="h-32 font-mono text-xs text-gray-900 border-gray-300" value={sessionAnki} onChange={e => setSessionAnki(e.target.value)} placeholder="Anki cards..." />
-        </div>
-        <DialogFooter className="mt-4"><Button onClick={handleSaveSession} className="bg-[#1a3673] text-white w-full">Save Changes</Button></DialogFooter>
-      </DialogContent></Dialog>
-
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle className="text-red-600">Delete Permanently</DialogTitle></DialogHeader><DialogDescription className="text-gray-600">This cannot be undone.</DialogDescription><DialogFooter><Button variant="destructive" onClick={handleDelete}>Delete</Button></DialogFooter></DialogContent></Dialog>
-    </div>
-  );
-}
+        <ScrollArea className="h-80">{selectedUnitForSession?.sessions.sort((a,b)=>a.order-b.order).map(s => <div key={s.id} className="p-3 border-b flex justify-between items-center text-gray-900"><span>{s.emoji} {s.name}</span><div className="flex gap-2"><Button size="sm" variant="outline"
