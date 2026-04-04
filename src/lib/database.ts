@@ -1,7 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { 
-  User, Language, Book, Unit, Session, AnkiCard, 
-  UserAnkiCard, Group, UserProgress, UserStats 
+  User, Language, Book, Unit, Session, AnkiCard, Group
 } from '@/types';
 
 class Database {
@@ -126,7 +125,6 @@ class Database {
   static async updateUnit(id: string, u: any) { return (await supabase.from('units').update(u).eq('id', id).select().single()).data; }
   static async deleteUnit(id: string) { await supabase.from('units').delete().eq('id', id); }
 
-  // CORREÇÃO CRÍTICA ERRO 406
   static async updateSession(id: string, updates: any): Promise<Session | null> {
     const mapped: any = {};
     if (updates.name !== undefined) mapped["name"] = updates.name;
@@ -197,7 +195,7 @@ class Database {
     }
   }
 
-  // ANKI & PROGRESS (Necessários para Student Dashboard e AnkiReview)
+  // ANKI & PROGRESS (Necessários para Dashboard)
   static async getUserAnkiCards(userId: string) { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId)).data || []; }
   static async getDueCards(userId: string) { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId).lte('nextReviewDate', new Date().toISOString()).neq('status', 'mastered')).data || []; }
   static async getNewCards(userId: string) { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId).eq('status', 'new')).data || []; }
