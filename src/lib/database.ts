@@ -25,18 +25,12 @@ class Database {
 
   // AUTH & USERS
   static async getCurrentUser(): Promise<User | null> {
-    if (this.useLocalStorage()) return JSON.parse(localStorage.getItem('polyglot_current_user') || 'null');
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) return await this.getUserById(user.id);
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) return await this.getUserById(data.user.id);
     return null;
   }
 
   static async setCurrentUser(user: User | null): Promise<void> {
-    if (this.useLocalStorage()) {
-      if (user) localStorage.setItem('polyglot_current_user', JSON.stringify(user));
-      else localStorage.removeItem('polyglot_current_user');
-      return;
-    }
     if (!user) await supabase.auth.signOut();
   }
 
@@ -84,8 +78,7 @@ class Database {
   }
 
   static async createLanguage(language: Omit<Language, 'id' | 'createdAt'>): Promise<Language> {
-    const newLang = { ...language, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    const { data, error } = await supabase.from('languages').insert(newLang).select().single();
+    const { data, error } = await supabase.from('languages').insert(language).select().single();
     if (error) throw error;
     return data;
   }
@@ -116,8 +109,7 @@ class Database {
   }
 
   static async createBook(book: Omit<Book, 'id' | 'createdAt'>): Promise<Book> {
-    const newBook = { ...book, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    const { data, error } = await supabase.from('books').insert(newBook).select().single();
+    const { data, error } = await supabase.from('books').insert(book).select().single();
     if (error) throw error;
     return data;
   }
@@ -149,8 +141,7 @@ class Database {
   }
 
   static async createUnit(unit: Omit<Unit, 'id' | 'createdAt'>): Promise<Unit> {
-    const newUnit = { ...unit, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-    const { data, error } = await supabase.from('units').insert(newUnit).select().single();
+    const { data, error } = await supabase.from('units').insert(unit).select().single();
     if (error) throw error;
     return data;
   }
@@ -211,9 +202,7 @@ class Database {
     return data;
   }
 
-  static async deleteGroup(id: string): Promise<void> {
-    await supabase.from('groups').delete().eq('id', id);
-  }
+  static async deleteGroup(id: string) { await supabase.from('groups').delete().eq('id', id); }
 
   static async addStudentToGroup(groupId: string, studentId: string): Promise<void> {
     const group = await this.getGroupById(groupId);
@@ -269,6 +258,7 @@ class Database {
   }
 
   static async getUserProgress(userId: string): Promise<UserProgress[]> { return (await supabase.from('user_progress').select('*').eq('userId', userId)).data || []; }
+  
   static async isSessionCompleted(userId: string, sessionId: string): Promise<boolean> {
     const { data } = await supabase.from('user_progress').select('*').eq('userId', userId).eq('sessionId', sessionId).maybeSingle();
     return data?.completed ?? false;
@@ -280,12 +270,8 @@ class Database {
       await supabase.from('user_progress').update({ completed: true, completedAt: new Date().toISOString() }).eq('id', (existing as any).id);
     } else {
       await supabase.from('user_progress').insert({ 
-        "userId": userId, 
-        "unitId": unitId, 
-        "sessionId": sessionId, 
-        "completed": true, 
-        "completedAt": new Date().toISOString(), 
-        "ankiCardsAdded": false 
+        "userId": userId, "unitId": unitId, "sessionId": sessionId, 
+        "completed": true, "completedAt": new Date().toISOString(), "ankiCardsAdded": false 
       });
     }
   }
