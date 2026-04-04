@@ -183,7 +183,7 @@ class Database {
     await supabase.from('sessions').delete().eq('id', id);
   }
 
-  // --- GROUPS ---
+  // --- GROUPS (CORREÇÃO UUID ERROR) ---
   static async getGroups(): Promise<Group[]> {
     const { data } = await supabase.from('groups').select('*');
     return data || [];
@@ -195,18 +195,20 @@ class Database {
   }
 
   static async createGroup(g: any): Promise<Group> {
-    const { data, error } = await supabase.from('groups').insert({
-      name: g.name,
-      bookId: g.bookId,
-      languageId: g.languageId || '',
-      studentIds: g.studentIds || [],
-      unlockedUnitIds: g.unlockedUnitIds || []
-    }).select().single();
+    // CORREÇÃO: Não enviamos strings vazias para colunas UUID
+    const payload: any = { name: g.name };
+    if (g.bookId && g.bookId !== "") payload.bookId = g.bookId;
+    if (g.languageId && g.languageId !== "") payload.languageId = g.languageId;
+    
+    payload.studentIds = g.studentIds || [];
+    payload.unlockedUnitIds = g.unlockedUnitIds || [];
+
+    const { data, error } = await supabase.from('groups').insert(payload).select().single();
     if (error) throw error;
     return data;
   }
 
-  static async updateGroup(id: string, u: Partial<Group>): Promise<Group | null> {
+  static async updateGroup(id: string, u: any): Promise<Group> {
     const { data, error } = await supabase.from('groups').update(u).eq('id', id).select().single();
     if (error) throw error;
     return data;
@@ -248,7 +250,7 @@ class Database {
     }
   }
 
-  // --- ANKI & PROGRESS ---
+  // --- PROGRESS & ANKI ---
   static async getUserAnkiCards(userId: string): Promise<UserAnkiCard[]> { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId)).data || []; }
   static async getDueCards(userId: string): Promise<UserAnkiCard[]> { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId).lte('nextReviewDate', new Date().toISOString()).neq('status', 'mastered')).data || []; }
   static async getNewCards(userId: string): Promise<UserAnkiCard[]> { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId).eq('status', 'new')).data || []; }
