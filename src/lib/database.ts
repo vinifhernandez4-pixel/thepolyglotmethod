@@ -66,7 +66,7 @@ class Database {
     await supabase.from('users').delete().eq('id', id);
   }
 
-  // LANGUAGES & BOOKS
+  // LANGUAGES
   static async getLanguages(): Promise<Language[]> {
     const { data } = await supabase.from('languages').select('*').order('name');
     return data || [];
@@ -93,6 +93,7 @@ class Database {
     await supabase.from('languages').delete().eq('id', id);
   }
 
+  // BOOKS
   static async getBooks(): Promise<Book[]> {
     const { data } = await supabase.from('books').select('*').order('order');
     return data || [];
@@ -236,56 +237,25 @@ class Database {
     }
   }
 
-  // ANKI & PROGRESS
-  static async getUserAnkiCards(userId: string): Promise<UserAnkiCard[]> { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId)).data || []; }
-  static async getDueCards(userId: string): Promise<UserAnkiCard[]> { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId).lte('nextReviewDate', new Date().toISOString()).neq('status', 'mastered')).data || []; }
-  static async getNewCards(userId: string): Promise<UserAnkiCard[]> { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId).eq('status', 'new')).data || []; }
-  static async updateAnkiCard(id: string, u: any) { return (await supabase.from('user_anki_cards').update(u).eq('id', id).select().single()).data; }
-  static async createUserAnkiCard(c: any): Promise<UserAnkiCard> { return (await supabase.from('user_anki_cards').insert(c).select().single()).data; }
+  // PROGRESS & STATS
+  static async getUserAnkiCards(userId: string) { return (await supabase.from('user_anki_cards').select('*').eq('userId', userId)).data || []; }
   
-  static async addAnkiCardsToUser(userId: string, unitId: string, sessionId: string, cards: AnkiCard[]) {
-    const existing = await this.getUserAnkiCards(userId);
-    for (const card of cards) {
-      if (!existing.some(c => c.cardId === card.id && c.sessionId === sessionId)) {
-        await this.createUserAnkiCard({
-          cardId: card.id || crypto.randomUUID(), userId, sessionId, unitId,
-          front: card.front, back: card.back, example: card.example, pronunciation: card.pronunciation,
-          stability: 3.173, difficulty: 5, interval: 0, repetitions: 0, easeFactor: 2.5,
-          nextReviewDate: new Date().toISOString(), status: 'new'
-        });
-      }
-    }
-  }
-
-  static async getUserProgress(userId: string): Promise<UserProgress[]> { return (await supabase.from('user_progress').select('*').eq('userId', userId)).data || []; }
-  
-  static async isSessionCompleted(userId: string, sessionId: string): Promise<boolean> {
+  static async isSessionCompleted(userId: string, sessionId: string) {
     const { data } = await supabase.from('user_progress').select('*').eq('userId', userId).eq('sessionId', sessionId).maybeSingle();
     return data?.completed ?? false;
   }
   
   static async completeSession(userId: string, unitId: string, sessionId: string): Promise<void> {
     const { data: existing } = await supabase.from('user_progress').select('*').eq('userId', userId).eq('sessionId', sessionId).maybeSingle();
-    if (existing) {
-      await supabase.from('user_progress').update({ completed: true, completedAt: new Date().toISOString() }).eq('id', (existing as any).id);
-    } else {
-      await supabase.from('user_progress').insert({ 
-        "userId": userId, "unitId": unitId, "sessionId": sessionId, 
-        "completed": true, "completedAt": new Date().toISOString(), "ankiCardsAdded": false 
-      });
-    }
+    if (existing) await supabase.from('user_progress').update({ completed: true, completedAt: new Date().toISOString() }).eq('id', (existing as any).id);
+    else await supabase.from('user_progress').insert({ userId, unitId, sessionId, completed: true, completedAt: new Date().toISOString(), ankiCardsAdded: false });
   }
 
-  static async getUserStats(userId: string): Promise<UserStats | null> { return (await supabase.from('user_stats').select('*').eq('userId', userId).maybeSingle()).data; }
-  static async updateUserStats(userId: string, updates: any): Promise<void> {
+  static async getUserStats(userId: string) { return (await supabase.from('user_stats').select('*').eq('userId', userId).maybeSingle()).data; }
+  static async updateUserStats(userId: string, updates: any) {
     const stats = await this.getUserStats(userId);
     if (stats) await supabase.from('user_stats').update(updates).eq('userId', userId);
-    else await supabase.from('user_stats').insert({ userId, ...updates, totalStudyTime: updates.totalStudyTime || 0, streakDays: updates.streakDays || 0, totalWordsLearned: 0, totalUnitsCompleted: 0 });
-  }
-
-  static async recordStudySession(userId: string, duration: number) {
-    const stats = await this.getUserStats(userId);
-    await this.updateUserStats(userId, { totalStudyTime: (stats?.totalStudyTime || 0) + duration, lastStudyDate: new Date().toISOString() });
+    else await supabase.from('user_stats').insert({ userId, ...updates, totalStudyTime: 0, streakDays: 0, totalWordsLearned: 0, totalUnitsCompleted: 0 });
   }
 }
 
