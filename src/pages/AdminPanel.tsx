@@ -5,15 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { 
   Plus, Edit2, Trash2, Users, BookOpen, Globe, 
-  Layers, GraduationCap, Eye, X,
-  Check, Lock as LockIcon
+  Layers, GraduationCap, Eye, X, Check, Lock as LockIcon
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -78,16 +77,16 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
   };
 
   const handleSaveLanguage = async () => {
-    const payload = { name: languageName, nameEn: languageNameEn, avatar: languageAvatar };
-    if (editingLanguage) await Database.updateLanguage(editingLanguage.id, payload);
-    else await Database.createLanguage(payload);
+    const p = { name: languageName, nameEn: languageNameEn, avatar: languageAvatar };
+    if (editingLanguage) await Database.updateLanguage(editingLanguage.id, p);
+    else await Database.createLanguage(p);
     setShowLanguageDialog(false); loadData();
   };
 
   const handleSaveBook = async () => {
-    const payload = { name: bookName, languageId: bookLanguageId, avatar: bookAvatar, order: books.length + 1 };
+    const p = { name: bookName, languageId: bookLanguageId, avatar: bookAvatar, order: books.length + 1 };
     if (editingBook) await Database.updateBook(editingBook.id, { name: bookName, languageId: bookLanguageId, avatar: bookAvatar });
-    else await Database.createBook(payload);
+    else await Database.createBook(p);
     setShowBookDialog(false); loadData();
   };
 
@@ -95,28 +94,31 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
     if (editingUnit) await Database.updateUnit(editingUnit.id, { name: unitName });
     else {
       const newUnit = await Database.createUnit({ bookId: unitBookId, name: unitName, order: units.length + 1, sessions: [] });
-      const defaults = [{ n: 'Preview', e: '👀', o: 1 }, { n: 'Review', e: '📝', o: 2 }, { n: 'Grammar', e: '📚', o: 3 }, { n: 'Audio', e: '🎧', o: 4 }];
-      for (const s of defaults) { await Database.addSessionToUnit(newUnit.id, { name: s.n, emoji: s.e, order: s.o, htmlContent: '', ankiCards: [] }); }
+      const defs = [{ n: 'Preview', e: '👀' }, { n: 'Review', e: '📝' }, { n: 'Grammar', e: '📚' }, { n: 'Audio', e: '🎧' }];
+      for (let i = 0; i < defs.length; i++) {
+        await Database.addSessionToUnit(newUnit.id, { name: defs[i].n, emoji: defs[i].e, order: i + 1, htmlContent: '', ankiCards: [] });
+      }
     }
     setShowUnitDialog(false); loadData();
   };
 
   const handleSaveSession = async () => {
     if (!editingSession) return;
-    let ankiCards = [];
-    try { if (sessionAnki.trim()) ankiCards = JSON.parse(sessionAnki); } catch (e) {
-      ankiCards = sessionAnki.trim().split('\n').map((line, idx) => {
-        const parts = line.split('|');
-        return { id: `card-${idx}`, front: parts[0]?.trim() || '', back: parts[1]?.trim() || '', pronunciation: parts[2]?.trim(), example: parts[3]?.trim() };
+    let cards = [];
+    try { if (sessionAnki.trim()) cards = JSON.parse(sessionAnki); } catch (e) {
+      cards = sessionAnki.trim().split('\n').map((l, i) => {
+        const p = l.split('|');
+        return { id: `c-${i}`, front: p[0]?.trim() || '', back: p[1]?.trim() || '', pronunciation: p[2]?.trim(), example: p[3]?.trim() };
       }).filter(c => c.front && c.back);
     }
-    await Database.updateSession(editingSession.id, { "name": sessionName, "emoji": sessionEmoji, "htmlContent": sessionHtml, "ankiCards": ankiCards });
+    await Database.updateSession(editingSession.id, { "name": sessionName, "emoji": sessionEmoji, "htmlContent": sessionHtml, "ankiCards": cards });
     setEditingSession(null); loadData();
   };
 
   const handleSaveGroup = async () => {
+    const p = { name: groupName, bookId: groupBookId, languageId: '', studentIds: [], unlockedUnitIds: [] };
     if (editingGroup) await Database.updateGroup(editingGroup.id, { name: groupName, bookId: groupBookId });
-    else await Database.createGroup({ name: groupName, bookId: groupBookId, languageId: '', studentIds: [], unlockedUnitIds: [] });
+    else await Database.createGroup(p);
     setShowGroupDialog(false); loadData();
   };
 
@@ -143,26 +145,23 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
 
       <main className="p-4 max-w-6xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 grid grid-cols-5 bg-white border border-gray-200">
-            <TabsTrigger value="languages" className="text-gray-700 data-[state=active]:bg-gray-100"><Globe className="w-4 h-4 mr-2"/>Languages</TabsTrigger>
-            <TabsTrigger value="books" className="text-gray-700 data-[state=active]:bg-gray-100"><BookOpen className="w-4 h-4 mr-2"/>Books</TabsTrigger>
-            <TabsTrigger value="units" className="text-gray-700 data-[state=active]:bg-gray-100"><Layers className="w-4 h-4 mr-2"/>Units</TabsTrigger>
-            <TabsTrigger value="groups" className="text-gray-700 data-[state=active]:bg-gray-100"><Users className="w-4 h-4 mr-2"/>Groups</TabsTrigger>
-            <TabsTrigger value="students" className="text-gray-700 data-[state=active]:bg-gray-100"><GraduationCap className="w-4 h-4 mr-2"/>Students</TabsTrigger>
+          <TabsList className="mb-6 grid grid-cols-5 bg-white border">
+            <TabsTrigger value="languages" className="text-gray-700"><Globe className="w-4 h-4 mr-2"/>Langs</TabsTrigger>
+            <TabsTrigger value="books" className="text-gray-700"><BookOpen className="w-4 h-4 mr-2"/>Books</TabsTrigger>
+            <TabsTrigger value="units" className="text-gray-700"><Layers className="w-4 h-4 mr-2"/>Units</TabsTrigger>
+            <TabsTrigger value="groups" className="text-gray-700"><Users className="w-4 h-4 mr-2"/>Groups</TabsTrigger>
+            <TabsTrigger value="students" className="text-gray-700"><GraduationCap className="w-4 h-4 mr-2"/>Students</TabsTrigger>
           </TabsList>
 
           <TabsContent value="languages">
-            <Button onClick={() => { setEditingLanguage(null); setLanguageName(''); setLanguageNameEn(''); setLanguageAvatar(''); setShowLanguageDialog(true); }} className="mb-4 bg-[#1a3673] text-white"><Plus className="mr-2" />Add Language</Button>
+            <Button onClick={() => { setEditingLanguage(null); setLanguageName(''); setLanguageNameEn(''); setLanguageAvatar(''); setShowLanguageDialog(true); }} className="mb-4 bg-[#1a3673] text-white"><Plus className="mr-2" />Add</Button>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {languages.map(l => (
-                <Card key={l.id} className="bg-white border-gray-200 shadow-sm"><CardContent className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    {l.avatar && <img src={l.avatar} className="w-8 h-8 rounded-full border border-gray-200" />}
-                    <span className="font-semibold text-gray-800">{l.name}</span>
-                  </div>
+                <Card key={l.id} className="bg-white"><CardContent className="p-4 flex justify-between items-center text-gray-800">
+                  <div className="flex items-center gap-2">{l.avatar && <img src={l.avatar} className="w-6 h-6 rounded-full"/>}<span>{l.name}</span></div>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" className="text-gray-600" onClick={() => { setEditingLanguage(l); setLanguageName(l.name); setLanguageNameEn(l.nameEn); setLanguageAvatar(l.avatar); setShowLanguageDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
-                    <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => { setItemToDelete({ type: 'language', id: l.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingLanguage(l); setLanguageName(l.name); setLanguageNameEn(l.nameEn); setLanguageAvatar(l.avatar); setShowLanguageDialog(true); }}><Edit2 className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" className="text-red-500" onClick={() => { setItemToDelete({ type: 'language', id: l.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </CardContent></Card>
               ))}
@@ -172,138 +171,103 @@ export default function AdminPanel({ onLogout }: AdminPanelProps) {
           <TabsContent value="groups">
             <Button onClick={() => { setEditingGroup(null); setGroupName(''); setGroupBookId(''); setShowGroupDialog(true); }} className="mb-4 bg-[#1a3673] text-white"><Plus className="mr-2" />Add Group</Button>
             <div className="grid gap-4">
-              {groups.map(g => {
-                const groupStudents = students.filter(s => g.studentIds.includes(s.id));
-                const groupUnits = units.filter(u => u.bookId === g.bookId);
-                return (
-                  <Card key={g.id} className="bg-white shadow-sm border-gray-200"><CardContent className="p-4">
-                    <div className="flex justify-between items-start border-b pb-4 mb-4">
-                      <div><h3 className="text-lg font-bold text-[#1a3673]">{g.name}</h3><p className="text-sm text-gray-500 font-medium">{groupStudents.length} Students Assigned</p></div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-gray-600" onClick={() => { setEditingGroup(g); setGroupName(g.name); setGroupBookId(g.bookId); setShowGroupDialog(true); }}><Edit2 className="w-4 h-4 mr-1"/>Edit</Button>
-                        <Button size="sm" variant="outline" className="text-red-500 border-red-200" onClick={() => { setItemToDelete({ type: 'group', id: g.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
+              {groups.map(g => (
+                <Card key={g.id} className="bg-white"><CardContent className="p-4">
+                  <div className="flex justify-between border-b pb-2 mb-4">
+                    <div><h3 className="font-bold text-[#1a3673]">{g.name}</h3></div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setEditingGroup(g); setGroupName(g.name); setGroupBookId(g.bookId); setShowGroupDialog(true); }}><Edit2 className="w-4 h-4"/></Button>
+                      <Button size="sm" variant="outline" className="text-red-500" onClick={() => { setItemToDelete({ type: 'group', id: g.id }); setShowDeleteConfirm(true); }}><Trash2 className="w-4 h-4" /></Button>
                     </div>
-                    <div className="mb-4">
-                      <Label className="text-gray-700 font-bold block mb-2 text-xs uppercase tracking-wider">Unlocked Units</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {groupUnits.map(u => (
-                          <Button key={u.id} size="sm" variant={g.unlockedUnitIds.includes(u.id) ? "default" : "outline"} className={g.unlockedUnitIds.includes(u.id) ? "bg-emerald-600 text-white" : "text-gray-500"} onClick={() => g.unlockedUnitIds.includes(u.id) ? Database.lockUnitForGroup(g.id, u.id).then(loadData) : Database.unlockUnitForGroup(g.id, u.id).then(loadData)}>
-                            {g.unlockedUnitIds.includes(u.id) ? <Check className="w-3 h-3 mr-1" /> : <LockIcon className="w-3 h-3 mr-1" />} {u.name}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="border-t pt-4 flex justify-between items-center">
-                      <Label className="text-gray-700 font-bold text-xs uppercase tracking-wider">Students</Label>
-                      <Button size="sm" variant="outline" className="text-[#1a3673] border-[#1a3673]" onClick={() => { setEditingGroup(g); setShowAddStudentDialog(true); }}><Plus className="w-3 h-3 mr-1" />Add Student</Button>
-                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <Label className="text-xs font-bold text-gray-500 uppercase">Units</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {groupStudents.map(s => <Badge key={s.id} variant="secondary" className="bg-gray-100 text-gray-800 border-gray-300 flex items-center gap-1">{s.name} <X className="w-3 h-3 ml-1 cursor-pointer hover:text-red-500" onClick={() => Database.removeStudentFromGroup(g.id, s.id).then(loadData)} /></Badge>)}
+                      {units.filter(u => u.bookId === g.bookId).map(u => (
+                        <Button key={u.id} size="sm" variant={g.unlockedUnitIds.includes(u.id) ? "default" : "outline"} className={g.unlockedUnitIds.includes(u.id) ? "bg-emerald-600" : ""} onClick={() => g.unlockedUnitIds.includes(u.id) ? Database.lockUnitForGroup(g.id, u.id).then(loadData) : Database.unlockUnitForGroup(g.id, u.id).then(loadData)}>
+                          {g.unlockedUnitIds.includes(u.id) ? <Check className="w-3 h-3 mr-1" /> : <LockIcon className="w-3 h-3 mr-1" />} {u.name}
+                        </Button>
+                      ))}
                     </div>
-                  </CardContent></Card>
-                );
-              })}
+                  </div>
+                  <div className="border-t pt-2 flex justify-between items-center">
+                    <Label className="text-xs font-bold text-gray-500 uppercase">Students</Label>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingGroup(g); setShowAddStudentDialog(true); }}><Plus className="w-3 h-3 mr-1" />Add</Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {students.filter(s => g.studentIds.includes(s.id)).map(s => <Badge key={s.id} variant="secondary" className="bg-gray-100 text-gray-700">{s.name} <X className="w-3 h-3 ml-1 cursor-pointer hover:text-red-500" onClick={() => Database.removeStudentFromGroup(g.id, s.id).then(loadData)} /></Badge>)}
+                  </div>
+                </CardContent></Card>
+              ))}
             </div>
           </TabsContent>
 
           <TabsContent value="books">
             <Button onClick={() => { setBookName(''); setBookLanguageId(''); setBookAvatar(''); setEditingBook(null); setShowBookDialog(true); }} className="mb-4 bg-[#1a3673] text-white">Add Book</Button>
-            {books.map(b => <Card key={b.id} className="mb-2 bg-white"><CardContent className="p-3 flex justify-between items-center text-gray-800 font-medium">{b.name}<Trash2 className="w-4 h-4 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'book', id:b.id}); setShowDeleteConfirm(true); }} /></CardContent></Card>)}
+            {books.map(b => <Card key={b.id} className="mb-2 bg-white"><CardContent className="p-3 flex justify-between items-center text-gray-800">{b.name}<Trash2 className="w-4 h-4 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'book', id:b.id}); setShowDeleteConfirm(true); }} /></CardContent></Card>)}
           </TabsContent>
+
           <TabsContent value="units">
             <Button onClick={() => { setUnitName(''); setUnitBookId(''); setEditingUnit(null); setShowUnitDialog(true); }} className="mb-4 bg-[#1a3673] text-white">Add Unit</Button>
-            {units.map(u => <Card key={u.id} className="mb-2 bg-white border-gray-200"><CardContent className="p-3 flex justify-between items-center font-medium text-gray-800"><span>{u.name}</span><div className="flex gap-3"><Eye className="w-5 h-5 text-emerald-600 cursor-pointer" onClick={() => { setSelectedUnitForSession(u); setShowSessionDialog(true); }} /><Trash2 className="w-5 h-5 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'unit', id:u.id}); setShowDeleteConfirm(true); }} /></div></CardContent></Card>)}
+            {units.map(u => <Card key={u.id} className="mb-2 bg-white"><CardContent className="p-3 flex justify-between items-center text-gray-800"><span>{u.name}</span><div className="flex gap-3"><Eye className="w-5 h-5 text-emerald-600 cursor-pointer" onClick={() => { setSelectedUnitForSession(u); setShowSessionDialog(true); }} /><Trash2 className="w-5 h-5 text-red-500 cursor-pointer" onClick={() => { setItemToDelete({type:'unit', id:u.id}); setShowDeleteConfirm(true); }} /></div></CardContent></Card>)}
           </TabsContent>
+
           <TabsContent value="students">
-            <div className="grid gap-2">{students.map(s => <Card key={s.id} className="bg-white"><CardContent className="p-3 flex justify-between items-center"><div><p className="font-bold text-gray-800">{s.name}</p><p className="text-xs text-gray-500">{s.email}</p></div><Trash2 className="w-4 h-4 text-red-500 cursor-pointer" onClick={() => {setItemToDelete({type:'user', id:s.id}); setShowDeleteConfirm(true);}} /></CardContent></Card>)}</div>
+            {students.map(s => <Card key={s.id} className="bg-white mb-2"><CardContent className="p-3 flex justify-between items-center text-gray-800"><div><p className="font-bold">{s.name}</p><p className="text-xs text-gray-500">{s.email}</p></div><Trash2 className="w-4 h-4 text-red-500 cursor-pointer" onClick={() => {setItemToDelete({type:'user', id:s.id}); setShowDeleteConfirm(true);}} /></CardContent></Card>)}
           </TabsContent>
         </Tabs>
       </main>
 
-      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent className="bg-white">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Language Settings</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Native Name</Label><Input className="bg-white text-gray-900 border-gray-300" value={languageName} onChange={e => setLanguageName(e.target.value)} /></div>
-          <div><Label className="text-gray-700 font-semibold mb-1 block">English Name</Label><Input className="bg-white text-gray-900 border-gray-300" value={languageNameEn} onChange={e => setLanguageNameEn(e.target.value)} /></div>
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Image URL (Avatar)</Label><Input className="bg-white text-gray-900 border-gray-300" value={languageAvatar} onChange={e => setLanguageAvatar(e.target.value)} placeholder="https://..." /></div>
+      <Dialog open={showLanguageDialog} onOpenChange={setShowLanguageDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Language</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div><Label>Native Name</Label><Input value={languageName} onChange={e => setLanguageName(e.target.value)} className="text-gray-900" /></div>
+          <div><Label>English Name</Label><Input value={languageNameEn} onChange={e => setLanguageNameEn(e.target.value)} className="text-gray-900" /></div>
+          <div><Label>Avatar URL</Label><Input value={languageAvatar} onChange={e => setLanguageAvatar(e.target.value)} className="text-gray-900" /></div>
         </div>
-        <DialogFooter><Button onClick={handleSaveLanguage} className="bg-[#1a3673] text-white">Save</Button></DialogFooter>
-      </Dialog></Dialog>
+        <DialogFooter><Button onClick={handleSaveLanguage} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}><DialogContent className="bg-white">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Book Details</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Book Title</Label><Input className="bg-white text-gray-900 border-gray-300" value={bookName} onChange={e => setBookName(e.target.value)} /></div>
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Cover Image URL</Label><Input className="bg-white text-gray-900 border-gray-300" value={bookAvatar} onChange={e => setBookAvatar(e.target.value)} placeholder="https://..." /></div>
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Language</Label><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger className="bg-white border-gray-300 text-gray-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white">{languages.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
+      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Book</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div><Label>Title</Label><Input value={bookName} onChange={e => setBookName(e.target.value)} className="text-gray-900" /></div>
+          <div><Label>Cover URL</Label><Input value={bookAvatar} onChange={e => setBookAvatar(e.target.value)} className="text-gray-900" /></div>
+          <div><Label>Language</Label><Select value={bookLanguageId} onValueChange={setBookLanguageId}><SelectTrigger className="text-gray-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white">{languages.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
         </div>
-        <DialogFooter><Button onClick={handleSaveBook} className="bg-[#1a3673] text-white">Save</Button></DialogFooter>
-      </Dialog></Dialog>
+        <DialogFooter><Button onClick={handleSaveBook} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}><DialogContent className="bg-white">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Unit Settings</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Unit Name</Label><Input className="bg-white text-gray-900 border-gray-300" value={unitName} onChange={e => setUnitName(e.target.value)} /></div>
-          {!editingUnit && (<div><Label className="text-gray-700 font-semibold mb-1 block">Assign to Book</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger className="bg-white border-gray-300 text-gray-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>)}
+      <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Unit</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div><Label>Unit Name</Label><Input value={unitName} onChange={e => setUnitName(e.target.value)} className="text-gray-900" /></div>
+          {!editingUnit && (<div><Label>Book</Label><Select value={unitBookId} onValueChange={setUnitBookId}><SelectTrigger className="text-gray-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>)}
         </div>
-        <DialogFooter><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">Save Unit (Autocreates Sessions)</Button></DialogFooter>
-      </Dialog></Dialog>
+        <DialogFooter><Button onClick={handleSaveUnit} className="bg-[#1a3673] text-white">Save Unit</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}><DialogContent className="bg-white">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Group Details</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Group Name</Label><Input className="bg-white text-gray-900 border-gray-300" value={groupName} onChange={e => setGroupName(e.target.value)} /></div>
-          <div><Label className="text-gray-700 font-semibold mb-1 block">Book Assigned</Label><Select value={groupBookId} onValueChange={setGroupBookId}><SelectTrigger className="bg-white border-gray-300 text-gray-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
+      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Group</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div><Label>Group Name</Label><Input value={groupName} onChange={e => setGroupName(e.target.value)} className="text-gray-900" /></div>
+          <div><Label>Book</Label><Select value={groupBookId} onValueChange={setGroupBookId}><SelectTrigger className="text-gray-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white">{books.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select></div>
         </div>
-        <DialogFooter><Button onClick={handleSaveGroup} className="bg-[#1a3673] text-white">Save Group</Button></DialogFooter>
-      </Dialog></Dialog>
+        <DialogFooter><Button onClick={handleSaveGroup} className="bg-[#1a3673] text-white">Save</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}><DialogContent className="bg-white text-gray-900">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Select Student to Add</DialogTitle></DialogHeader>
-          <ScrollArea className="h-72 mt-2">
-            {students.filter(s => !editingGroup?.studentIds.includes(s.id)).map(s => (
-              <div key={s.id} className="p-3 border-b border-gray-100 flex justify-between items-center hover:bg-gray-50 cursor-pointer" onClick={() => editingGroup && Database.addStudentToGroup(editingGroup.id, s.id).then(loadData)}>
-                <span className="text-gray-800 font-medium">{s.name} <span className="text-xs text-gray-400">({s.email})</span></span><Plus className="w-4 h-4 text-[#1a3673]"/>
-              </div>
-            ))}
-          </ScrollArea>
+      <Dialog open={showAddStudentDialog} onOpenChange={setShowAddStudentDialog}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle>Add Student</DialogTitle></DialogHeader>
+        <ScrollArea className="h-60">{students.filter(s => !editingGroup?.studentIds.includes(s.id)).map(s => <div key={s.id} className="p-3 border-b hover:bg-gray-50 cursor-pointer flex justify-between" onClick={() => editingGroup && Database.addStudentToGroup(editingGroup.id, s.id).then(loadData)}><span>{s.name}</span><Plus className="w-4 h-4"/></div>)}</ScrollArea>
       </DialogContent></Dialog>
       
-      <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}><DialogContent className="max-w-2xl bg-white text-gray-900">
-        <DialogHeader><DialogTitle className="text-[#1a3673]">Manage Unit Content</DialogTitle></DialogHeader>
-          <ScrollArea className="h-96 pr-4">
-            {selectedUnitForSession?.sessions.sort((a,b) => a.order - b.order).map(s => (
-              <div key={s.id} className="p-3 border-b border-gray-100 flex justify-between items-center">
-                <span className="font-medium text-gray-800">{s.emoji} {s.name}</span>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="border-gray-300 text-[#1a3673]" onClick={() => { setEditingSession(s); setSessionName(s.name); setSessionEmoji(s.emoji); setSessionHtml(s.htmlContent); setSessionAnki(JSON.stringify(s.ankiCards, null, 2)); setShowSessionDialog(false); }}><Edit2 className="w-3 h-3 mr-1"/>Edit</Button>
-                  <Button size="sm" variant="outline" className="border-gray-300 text-red-500" onClick={() => {setItemToDelete({type:'session', id:s.id}); setShowDeleteConfirm(true);}}><Trash2 className="w-3 h-3"/></Button>
-                </div>
-              </div>
-            ))}
-          </ScrollArea>
-          <DialogFooter><Button onClick={() => { if(selectedUnitForSession) Database.addSessionToUnit(selectedUnitForSession.id, { name: 'New Session', emoji: '🎮', order: selectedUnitForSession.sessions.length + 1 }).then(loadData); }} className="bg-[#c5a059] text-white">+ New Session</Button></DialogFooter>
+      <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}><DialogContent className="max-w-2xl bg-white text-gray-900"><DialogHeader><DialogTitle className="flex justify-between">Unit Sessions <Button size="sm" onClick={() => { if(selectedUnitForSession) Database.addSessionToUnit(selectedUnitForSession.id, { name: 'New Session', emoji: '🎮', order: selectedUnitForSession.sessions.length + 1 }).then(loadData); }}>+ Add</Button></DialogTitle></DialogHeader>
+        <ScrollArea className="h-80">{selectedUnitForSession?.sessions.sort((a,b)=>a.order-b.order).map(s => <div key={s.id} className="p-3 border-b flex justify-between"><span>{s.emoji} {s.name}</span><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { setEditingSession(s); setSessionName(s.name); setSessionEmoji(s.emoji); setSessionHtml(s.htmlContent); setSessionAnki(JSON.stringify(s.ankiCards, null, 2)); setShowSessionDialog(false); }}><Edit2 className="w-3 h-3"/></Button><Button size="sm" variant="outline" className="text-red-500" onClick={() => {setItemToDelete({type:'session', id:s.id}); setShowDeleteConfirm(true);}}><Trash2 className="w-3 h-3"/></Button></div></div>)}</ScrollArea>
       </DialogContent></Dialog>
 
-      <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}><DialogContent className="max-w-5xl bg-white max-h-[90vh] text-gray-900">
-          <DialogHeader><DialogTitle className="text-[#1a3673]">Session Editor</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 gap-4 overflow-y-auto pr-2">
-            <div className="flex gap-4">
-              <div className="flex-1"><Label className="font-bold text-gray-700">Name</Label><Input value={sessionName} onChange={e => setSessionName(e.target.value)} className="text-gray-900 border-gray-300" /></div>
-              <div><Label className="font-bold text-gray-700">Icon</Label><div className="flex gap-2 bg-gray-50 p-1 rounded border">{EMOJI_OPTIONS.map(e => <button key={e} onClick={() => setSessionEmoji(e)} className={`p-1 rounded text-xl ${sessionEmoji === e ? 'bg-[#c5a059]/30 ring-1 ring-[#c5a059]' : ''}`}>{e}</button>)}</div></div>
-            </div>
-            <div><Label className="font-bold text-gray-700">HTML Code</Label><Textarea className="h-64 font-mono text-xs text-gray-900 bg-gray-50 border-gray-300" value={sessionHtml} onChange={e => setSessionHtml(e.target.value)} /></div>
-            <div><Label className="font-bold text-gray-700">Anki JSON</Label><Textarea className="h-32 font-mono text-xs text-gray-900 bg-gray-50 border-gray-300" value={sessionAnki} onChange={e => setSessionAnki(e.target.value)} /></div>
-          </div>
-          <DialogFooter className="border-t pt-4 mt-2"><Button onClick={() => setEditingSession(null)} variant="ghost">Cancel</Button><Button onClick={handleSaveSession} className="bg-[#1a3673] text-white">Save Changes</Button></DialogFooter>
-        </DialogContent></Dialog>
-
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent className="bg-white text-gray-900">
-        <DialogHeader><DialogTitle className="text-red-600">Delete Permanently?</DialogTitle></DialogHeader>
-        <DialogDescription className="text-gray-600 font-medium">This cannot be undone.</DialogDescription>
-        <DialogFooter><Button variant="destructive" onClick={handleDelete}>Delete</Button></DialogFooter>
+      <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}><DialogContent className="max-w-5xl bg-white text-gray-900 max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Edit Session</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <Input value={sessionName} onChange={e => setSessionName(e.target.value)} className="text-gray-900" />
+          <div className="flex gap-2 flex-wrap">{EMOJI_OPTIONS.map(e => <button key={e} onClick={() => setSessionEmoji(e)} className={`p-2 rounded text-xl ${sessionEmoji === e ? 'bg-blue-100 ring-1' : ''}`}>{e}</button>)}</div>
+          <Textarea className="h-60 font-mono text-xs text-gray-900" value={sessionHtml} onChange={e => setSessionHtml(e.target.value)} placeholder="Paste HTML" />
+          <Textarea className="h-32 font-mono text-xs text-gray-900" value={sessionAnki} onChange={e => setSessionAnki(e.target.value)} placeholder="Anki cards..." />
+        </div>
+        <DialogFooter><Button onClick={handleSaveSession} className="bg-[#1a3673] text-white">Save Changes</Button></DialogFooter>
       </DialogContent></Dialog>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}><DialogContent className="bg-white text-gray-900"><DialogHeader><DialogTitle className="text-red-600">Confirm Delete</DialogTitle></DialogHeader><DialogFooter><Button variant="destructive" onClick={handleDelete}>Delete</Button></DialogFooter></DialogContent></Dialog>
     </div>
   );
 }
