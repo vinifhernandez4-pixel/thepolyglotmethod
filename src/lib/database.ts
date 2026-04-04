@@ -109,14 +109,14 @@ class Database {
     return data;
   }
 
-  static async createBook(book: Omit<Book, 'id' | 'createdAt'>): Promise<Book> {
-    const { data, error } = await supabase.from('books').insert(book).select().single();
+  static async createBook(b: any): Promise<Book> {
+    const { data, error } = await supabase.from('books').insert(b).select().single();
     if (error) throw error;
     return data;
   }
 
-  static async updateBook(id: string, updates: Partial<Book>): Promise<Book | null> {
-    const { data, error } = await supabase.from('books').update(updates).eq('id', id).select().single();
+  static async updateBook(id: string, u: any): Promise<Book> {
+    const { data, error } = await supabase.from('books').update(u).eq('id', id).select().single();
     if (error) throw error;
     return data;
   }
@@ -141,14 +141,14 @@ class Database {
     return data;
   }
 
-  static async createUnit(unit: Omit<Unit, 'id' | 'createdAt'>): Promise<Unit> {
-    const { data, error } = await supabase.from('units').insert(unit).select().single();
+  static async createUnit(u: any): Promise<Unit> {
+    const { data, error } = await supabase.from('units').insert(u).select().single();
     if (error) throw error;
     return data;
   }
 
-  static async updateUnit(id: string, updates: Partial<Unit>): Promise<Unit | null> {
-    const { data, error } = await supabase.from('units').update(updates).eq('id', id).select().single();
+  static async updateUnit(id: string, u: any): Promise<Unit> {
+    const { data, error } = await supabase.from('units').update(u).eq('id', id).select().single();
     if (error) throw error;
     return data;
   }
