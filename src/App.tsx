@@ -31,7 +31,8 @@ function BottomNav({ activeTab, onTabChange }: { activeTab: string; onTabChange:
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom z-50">
-      <div className="max-w-none md:max-w-4xl mx-auto flex justify-around items-center h-16 px-4">
+      {/* Ajustado max-w para acompanhar o novo layout desktop */}
+      <div className="max-w-full md:max-w-6xl mx-auto flex justify-around items-center h-16 px-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -60,7 +61,6 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sessionParams, setSessionParams] = useState<{ unitId: string; sessionId: string } | null>(null);
 
-  // Handle navigation from child components
   const handleNavigate = (page: string, params?: unknown) => {
     switch (page) {
       case 'session':
@@ -86,7 +86,6 @@ function AppContent() {
     setSessionParams(null);
   };
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#1a3673]">
@@ -98,17 +97,14 @@ function AppContent() {
     );
   }
 
-  // Show login if not authenticated
   if (!isAuthenticated) {
     return <Login onLogin={() => setCurrentPage('main')} />;
   }
 
-  // Show admin panel for admin users
   if (user?.role === 'admin') {
     return <AdminPanel onLogout={logout} />;
   }
 
-  // Render current page
   const renderPage = () => {
     switch (currentPage) {
       case 'session':
@@ -139,23 +135,25 @@ function AppContent() {
           case 'profile':
             return (
               <div className="min-h-screen bg-[#1a3673] p-4 pb-20">
-                <h1 className="text-2xl font-bold text-white mb-4">个人资料</h1>
-                <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 bg-[#1a3673] rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                      {user?.name.charAt(0)}
+                <div className="max-w-6xl mx-auto">
+                  <h1 className="text-2xl font-bold text-white mb-4">个人资料</h1>
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-16 h-16 bg-[#1a3673] rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        {user?.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-lg text-[#1a3673]">{user?.name}</p>
+                        <p className="text-gray-500 text-sm">{user?.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-lg text-[#1a3673]">{user?.name}</p>
-                      <p className="text-gray-500 text-sm">{user?.email}</p>
-                    </div>
+                    <button
+                      onClick={logout}
+                      className="w-full py-3 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors"
+                    >
+                      退出登录
+                    </button>
                   </div>
-                  <button
-                    onClick={logout}
-                    className="w-full py-3 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors"
-                  >
-                    退出登录
-                  </button>
                 </div>
               </div>
             );
@@ -167,7 +165,8 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#1a3673]">
-      <div className="max-w-md mx-auto bg-[#1a3673] min-h-screen shadow-xl">
+      {/* ALTERAÇÃO: Removido max-w-md e adicionado max-w-full md:max-w-6xl para expansão */}
+      <div className="w-full md:max-w-6xl mx-auto bg-[#1a3673] min-h-screen shadow-xl relative">
         {renderPage()}
         {currentPage === 'main' && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
       </div>
@@ -176,7 +175,6 @@ function AppContent() {
   );
 }
 
-// Main App with Providers
 function App() {
   return (
     <AuthProvider>
