@@ -175,18 +175,6 @@ export default function SessionView({ unitId, sessionId, onBack, onComplete }: S
         )}
       </main>
 
-      {/* Floating complete button for mobile */}
-      {!isCompleted && (
-        <div className="fixed bottom-4 left-4 right-4 md:hidden z-50">
-          <Button
-            onClick={handleComplete}
-            className="w-full h-12 bg-[#c5a059] hover:bg-[#b08d4b] text-white font-semibold shadow-lg"
-          >
-            {t('markComplete')}
-          </Button>
-        </div>
-      )}
-
       {/* Completion Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
         <DialogContent className="sm:max-w-md bg-white">
